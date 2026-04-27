@@ -6,7 +6,7 @@ Originally built for DSA5103 lecture notes, but works for any set of markdown fi
 
 ## What it does
 
-- Concatenates every `.md` in `markdowns/` (sorted naturally: `lec1`, `lec2`, …, `lec10`) into a single `cheatsheet.md`.
+- Concatenates every `.md` in `markdowns/` into a single `cheatsheet.md` (see [Ordering](#ordering) below).
 - Generates a `cheatsheet.html` that lays the content out in a fixed number of pages × columns (default: 2 pages × 6 columns, A4 landscape).
 - Renders LaTeX math (`$...$`, `$$...$$`, `\(...\)`, `\[...\]`) via MathJax, protecting it from markdown's `_`/`*`/`\` mangling.
 - Auto-shrinks the body font until everything fits within the page budget; the toolbar shows the chosen size or warns if the content overflows the floor.
@@ -40,6 +40,16 @@ The layout knobs live at the top of `generate-cheatsheet.py`:
 | `MARGIN_IN` | `0.1` | Page margin in inches. |
 | `COL_GAP_IN` | `0.1` | Gap between columns. |
 | `TITLE` | `"DSA5103 Cheatsheet"` | Shown in the toolbar and combined `.md`. |
+
+## Ordering
+
+You don't need `lec1.md`, `lec2.md`, … — files are sorted with a *natural sort* on the first number found in each filename, falling back to the filename itself. So all of these work:
+
+- `lec1.md, lec2.md, …, lec10.md` → numeric order (`lec10` after `lec9`, not after `lec1`).
+- `01-intro.md, 02-gradients.md, …` → numeric order via the prefix. Zero-pad if you have more than 9 files.
+- `intro.md, gradients.md, optimization.md` → plain alphabetical (no numbers found).
+
+A file with no digits in its name is treated as `0` and sorts to the top. If you want a strict custom order, the simplest fix is to prefix filenames with `01-`, `02-`, etc.
 
 ## Repo layout
 
