@@ -2,12 +2,6 @@
 
 ## 1. Core Idea
 
-| | Supervised | Unsupervised |
-|---|---|---|
-| Labels | Given (Y) | None |
-| Goal | Predict labels | Find hidden patterns |
-| Examples | SVM, linear regression | K-means, hierarchical |
-
 **Clustering** groups data so that:
 - **Intra-cluster distance** is **small** (similar points together)
 - **Inter-cluster distance** is **large** (different groups far apart)
@@ -116,9 +110,3 @@ Objective
 | Key choice | Linkage type + cut height | K, initialisation |
 | Overlapping clusters? | No | No |
 
-## 7. Common Pitfalls & Practical Notes
-
-- **K-means:** results depend on random initialisation → run multiple times, pick lowest objective value
-- **Hierarchical:** choice of linkage affects results significantly
-- **Both:** no universally "correct" number of clusters — use elbow plot or dendrogram gap heuristic
-- **Horizontal position** in a dendrogram carries **no similarity information** — only height matters

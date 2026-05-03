@@ -108,8 +108,6 @@ $$p^{(k)} = -B_k^{-1}\nabla f(x^{(k)})$$
 For $\min_x f(x) + g(x)$ ($f$ smooth, $g$ non-smooth):
 $$x^{(k+1)} = \arg\min_x \left\{ \nabla f(x^{(k)})^T(x-x^{(k)}) + \frac{1}{2}(x-x^{(k)})^T B_k (x-x^{(k)}) + g(x) \right\}$$
 
----
-
 ## Quick Reference: Convergence Rates
 
 | Method | Rate |

@@ -22,20 +22,20 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-MD_DIR = ROOT / "markdowns"
+MD_DIR = ROOT / "markdowns-dsa5106"
 OUT_MD = ROOT / "cheatsheet.md"
 OUT_HTML = ROOT / "cheatsheet.html"
 
 # ---- Layout knobs ---------------------------------------------------------
-PAGES = 2              # force fit into exactly this many pages
-COLUMNS = 6            # columns per page
-FONT_PT_START = 5.0    # starting body font size; auto-fit will shrink as needed
-FONT_PT_MIN = 3.5      # don't shrink below this
+PAGES = 6              # force fit into exactly this many pages
+COLUMNS = 4            # columns per page
+FONT_PT_START = 6.0    # starting body font size; auto-fit will shrink as needed
+FONT_PT_MIN = 4.0      # don't shrink below this
 LINE_HEIGHT = 1.0
 PAGE = "A4 landscape"   # or "A4 landscape"
 MARGIN_IN = 0.1
 COL_GAP_IN = 0.1
-TITLE = "DSA5103 Cheatsheet"
+TITLE = "DSA5106 Cheatsheet"
 # -------------------------------------------------------------------
 
 
@@ -283,10 +283,12 @@ HTML_TEMPLATE = r"""<!doctype html>
 
 
 def write_html(md: str) -> None:
-    # In a <script type="text/markdown"> block the only sequence we must neutralize
-    # is a closing </script> tag. Leave $, \, _, *, < etc. intact so MathJax/marked
-    # can process them on the client side.
-    safe = re.sub(r"</(script)", r"<\\/\1", md, flags=re.IGNORECASE)
+    # In a <script type="text/markdown"> block the browser HTML parser still
+    # consumes '<' as tag-open (e.g. \mathbf{y}_{<t} truncates at '<t').
+    # Escape '<' to '&lt;' — both marked and MathJax handle &lt; correctly.
+    # Also neutralize any literal </script> to prevent early tag close.
+    safe = md.replace("<", "&lt;")
+    safe = re.sub(r"&lt;/(script)", r"<\\/\1", safe, flags=re.IGNORECASE)
     # Page dimensions for the @page size keyword we use (letter/a4 landscape).
     if "a4" in PAGE.lower():
         page_w, page_h = (11.69, 8.27)
@@ -316,7 +318,7 @@ def main() -> None:
     write_combined_md(md)
     write_html(md)
     print(f"Wrote {OUT_MD.relative_to(ROOT)} and {OUT_HTML.relative_to(ROOT)}")
-    print("Open cheatsheet.html in a browser, then Print -> Save as PDF (landscape, 2-sided).")
+    print("Open cheatsheet.html in a browser, then Print -> Save as PDF.")
 
 
 if __name__ == "__main__":

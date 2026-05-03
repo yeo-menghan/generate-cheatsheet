@@ -1,1709 +1,2627 @@
-# DSA5103 Cheatsheet
+# DSA5106 Cheatsheet
 
 _Combined from `markdowns/`. Edit this file freely; re-run the script to refresh the HTML._
 
 ---
 
-# Lecture 1: Intro
+# Math Fundamentals for Deep Learning
 
----
+## 1. Exponentials & Logarithms
 
-## 1. Optimization Problem (General Form)
+### Core Rules
 
-$$\min_x f(x) \quad \text{s.t.} \quad x \in S \subseteq \mathbb{R}^n$$
-
-- **Variable**: $x = (x_1, \ldots, x_n)^T$
-- **Objective function**: $f : \mathbb{R}^n \to \mathbb{R}$
-- **Feasible set**: $S$ — points satisfying all constraints
-- **Optimal solution**: $x^* = \arg\min_{x \in S} f(x)$, where $f(x^*) \leq f(x)\ \forall x \in S$
-- **Optimal value**: $f(x^*)$
-- **max ↔ min equivalence**: $\max f(x) \equiv \min{-f(x)}$
-
-### Constraint types (Constrained NLP)
-$$S = \{x \in \mathbb{R}^n \mid g_i(x) = 0,\ i=1,\ldots,m;\ h_j(x) \leq 0,\ j=1,\ldots,p\}$$
-
----
-
-## 2. Local vs Global Minimizers
-
-| Term | Definition |
-|---|---|
-| **Local minimizer** | $\exists \epsilon > 0$ s.t. $f(x) \geq f(x^*)\ \forall x \in S \cap B_\epsilon(x^*)$ |
-| **Strict local min** | $f(x) > f(x^*)\ \forall x \in S \cap B_\epsilon(x^*) \setminus \{x^*\}$ |
-| **Global minimizer** | $f(x) \geq f(x^*)\ \forall x \in S$ |
-| **Strict global min** | $f(x) > f(x^*)\ \forall x \in S \setminus \{x^*\}$ |
-
-> Every global minimizer is a local minimizer. The converse is **not** generally true.
-
----
-
-## 3. Gradient Vector
-
-$$\nabla f(x) = \left(\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n}\right)^T$$
-
-- $-\nabla f(x^*)$: direction of **steepest descent**
-- $\nabla f(x^*)$: direction of **steepest ascent**
-- **Key result**: $\nabla(b^T x) = b$
-
----
-
-## 4. Hessian Matrix
-
-$$H_f(x) = \begin{pmatrix} \frac{\partial^2 f}{\partial x_i \partial x_j} \end{pmatrix}_{n \times n}$$
-
-- Symmetric when $f$ has continuous second-order derivatives.
-
-**Example**: $f(x) = x_1^3 + 2x_1x_2 + x_2^2$
-
-$$\nabla f = \begin{pmatrix} 3x_1^2 + 2x_2 \\ 2x_1 + 2x_2 \end{pmatrix}, \quad H_f = \begin{pmatrix} 6x_1 & 2 \\ 2 & 2 \end{pmatrix}$$
-
----
-
-## 5. Matrix Definiteness
-
-| Type | Condition |
-|---|---|
-| Positive semidefinite (PSD) | $x^T A x \geq 0\ \forall x$ — all eigenvalues $\lambda \geq 0$ |
-| Positive definite (PD) | $x^T A x > 0\ \forall x \neq 0$ — all eigenvalues $\lambda > 0$ |
-| Negative semidefinite | all eigenvalues $\lambda \leq 0$ |
-| Negative definite | all eigenvalues $\lambda < 0$ |
-| **Indefinite** | $\exists$ both positive and negative eigenvalues |
-
-> PD $\Rightarrow$ PSD, but PSD $\not\Rightarrow$ PD.
-
----
-
-## 6. Optimality Conditions (Unconstrained NLP)
-
-A point $x^*$ is a **stationary point** if $\nabla f(x^*) = 0$.
-
-### Necessary Conditions (if $x^*$ is a local min):
-1. $\nabla f(x^*) = 0$
-2. $H_f(x^*)$ is **positive semidefinite**
-
-### Sufficient Conditions (to confirm $x^*$ is a local min):
-1. $\nabla f(x^*) = 0$
-2. $H_f(x^*)$ is **positive definite**
-
-> If $H_f(x^*)$ is **not** PSD ⟹ $x^*$ is **not** a local minimizer.
-
----
-
-## 7. Convex Sets & Functions
-
-**Convex set**: $x, y \in D \Rightarrow \lambda x + (1-\lambda)y \in D\ \forall \lambda \in [0,1]$
-
-**Convex function**: $f(\lambda x + (1-\lambda)y) \leq \lambda f(x) + (1-\lambda)f(y)\ \forall x,y \in D,\ \lambda \in [0,1]$
-
-**Strictly convex**: strict inequality for distinct $x, y$, $\lambda \in (0,1)$
-
-### Hessian Test for Convexity (Theorem 1.25)
-| Hessian condition (at all $x \in D$) | Conclusion |
-|---|---|
-| $H_f(x)$ is PSD | $f$ is convex |
-| $H_f(x)$ is PD | $f$ is **strictly** convex |
-| $H_f(\hat{x})$ is indefinite at some $\hat{x}$ | $f$ is neither convex nor concave |
-
-### Why convexity matters:
-- Any **local minimizer** of a convex function is a **global minimizer**.
-- If $f$ is **strictly convex**, the global minimizer is **unique**.
-
----
-
-## 8. Quick Reference: Calculation Steps
-
-**To find & verify a local minimizer (unconstrained)**:
-1. Solve $\nabla f(x^*) = 0$ → find stationary points
-2. Compute $H_f(x^*)$
-3. Find eigenvalues of $H_f(x^*)$:
-   - All $> 0$: local min ✓ (sufficient)
-   - Any $< 0$: not a local min ✗ (necessary fails)
-
-**To check convexity**:
-1. Compute $H_f(x)$ generally
-2. Check eigenvalues for all $x \in D$
-
----
-
-# Lecture 2: Gradient Descent & Linear Regression
-
----
-
-## 1. Gradient Descent Basics
-
-**Stationary point:** $\nabla f(x) = 0$ — necessary condition for a local min.
-
-**Key property of gradient (Proposition 1):**
-- $\nabla f(x^*)^T d$ = rate of change of $f$ moving from $x^*$ in direction $d$
-- $f$ **decreases most rapidly** along $-\nabla f(x^*)$ (steepest descent direction)
-- $f$ **increases most rapidly** along $\nabla f(x^*)$
-
-**General iterative update:**
-$$x^{(k+1)} = x^{(k)} + \alpha_k p^{(k)}$$
-where $\alpha_k > 0$ is the step length/learning rate and $p^{(k)}$ is the search direction.
-
----
-
-## 2. Descent Direction
-
-$p^{(k)}$ is a **descent direction** at $x^{(k)}$ if:
-$$\nabla f(x^{(k)})^T p^{(k)} < 0$$
-
-This guarantees $\exists\, \delta > 0$ such that $f(x^{(k)} + \alpha_k p^{(k)}) < f(x^{(k)})$ for all $\alpha_k \in (0, \delta)$.
-
-> **Tip:** $p = -\nabla f(x^{(k)})$ always satisfies this since $\nabla f^T(-\nabla f) = -\|\nabla f\|^2 \leq 0$.
-
----
-
-## 3. Steepest Descent Method
-
-**Update rule:**
-$$x^{(k+1)} = x^{(k)} - \alpha_k \nabla f(x^{(k)})$$
-
-**Stopping criterion:** $\|\nabla f(x^{(k)})\| \leq \epsilon$
-
-### Step Length Options
-
-| Method | Description |
-|--------|-------------|
-| **Constant** | Fix $\alpha_k = c$. Too small → slow; too large → diverge |
-| **Exact line search** | $\alpha_k = \arg\min_{\alpha>0} f(x^{(k)} + \alpha p^{(k)})$, solve $\phi'(\alpha)=0$ |
-| **Backtracking** | Start large, shrink until Armijo condition holds |
-
-### Exact Line Search
-Solve: $\min_{\alpha > 0}\ \phi(\alpha) = f(x^{(k)} + \alpha p^{(k)})$
-
-Set $\phi'(\alpha) = 0$ and solve for $\alpha_k$.
-
-### Backtracking Line Search (Armijo)
-Parameters: $\bar{\alpha} > 0,\ \rho \in (0,1),\ c_1 \in (0,1)$ (e.g. $\bar\alpha=1, \rho=0.9, c_1=10^{-4}$)
-
-Shrink $\alpha \leftarrow \rho\alpha$ until:
-$$f(x^{(k)} + \alpha p^{(k)}) \leq f(x^{(k)}) + c_1 \alpha \nabla f(x^{(k)})^T p^{(k)}$$
-
-> Note: RHS < LHS initially since $\nabla f^T p < 0$, so the condition requires sufficient decrease.
-
----
-
-## 4. Properties of Steepest Descent (Exact Line Search)
-
-- **Perpendicular steps:** consecutive steps are orthogonal
-- **Monotone decrease:** $f(x^{(k+1)}) < f(x^{(k)})$ if $\nabla f(x^{(k)}) \neq 0$
-- **Zig-zag behaviour** near the solution (inherently slow)
-
----
-
-## 5. Linear Regression — One Variable
-
-**Model:** $f(x) = \beta_1 x + \beta_0$
-
-**Cost function:**
-$$L(\beta_0, \beta_1) = \frac{1}{2}\sum_{i=1}^n (\beta_1 x_i + \beta_0 - y_i)^2$$
-
-**Gradients:**
-$$\frac{\partial L}{\partial \beta_0} = \sum_{i=1}^n (\beta_1 x_i + \beta_0 - y_i)$$
-$$\frac{\partial L}{\partial \beta_1} = \sum_{i=1}^n (\beta_1 x_i + \beta_0 - y_i)\, x_i$$
-
-**Update rule:**
-$$\beta_0^{(k+1)} = \beta_0^{(k)} - \alpha_k \sum_{i=1}^n (\beta_1^{(k)} x_i + \beta_0^{(k)} - y_i)$$
-$$\beta_1^{(k+1)} = \beta_1^{(k)} - \alpha_k \sum_{i=1}^n (\beta_1^{(k)} x_i + \beta_0^{(k)} - y_i)\, x_i$$
-
----
-
-## 6. Linear Regression — Multiple Variables
-
-**Model:** $f(x) = \beta^T x + \beta_0,\quad \beta \in \mathbb{R}^p$
-
-**Cost function:**
-$$L(\beta_0, \beta) = \frac{1}{2}\sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)^2$$
-
-**Gradients:**
-$$\frac{\partial L}{\partial \beta_0} = \sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)$$
-$$\frac{\partial L}{\partial \beta_j} = \sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)\, x_{ij} \quad j=1,\ldots,p$$
-
----
-
-## 7. Normal Equation (Analytical Solution)
-
-Define augmented matrix and vectors:
-$$\hat{X} = \begin{bmatrix}1 & x_1^T \\ 1 & x_2^T \\ \vdots & \vdots \\ 1 & x_n^T\end{bmatrix} \in \mathbb{R}^{n\times(p+1)}, \quad \hat{\beta} = \begin{bmatrix}\beta_0 \\ \beta_1 \\ \vdots \\ \beta_p\end{bmatrix}$$
-
-**Normal equation:**
-$$\hat{X}^T \hat{X}\,\hat{\beta} = \hat{X}^T Y$$
-
-**Solution (if $\hat{X}^T\hat{X}$ invertible):**
-$$\hat{\beta} = (\hat{X}^T \hat{X})^{-1} \hat{X}^T Y$$
-
-| Case | Condition | Solutions |
-|------|-----------|-----------|
-| Over-determined | $n \gg p$, $\hat{X}^T\hat{X}$ invertible | Unique |
-| Under-determined | $n < p$, $\hat{X}^T\hat{X}$ not invertible | Infinite |
-
----
-
-## 8. Feature Scaling (Standardisation)
-
-$$X_{\cdot j} \leftarrow \frac{X_{\cdot j} - \text{mean}(X_{\cdot j})}{\text{std}(X_{\cdot j})}, \qquad Y \leftarrow \frac{Y - \text{mean}(Y)}{\text{std}(Y)}$$
-
----
-
-## 9. Steepest Descent vs. Normal Equation
-
-| | Steepest Descent | Normal Equation |
-|-|-----------------|-----------------|
-| Type | Iterative | Analytical |
-| Step length | Must be chosen | Not needed |
-| Large $p$ | Works well | Slow (matrix inversion) |
-| **When to use** | $p > 5000$ | $p \leq 5000$ |
-
----
-
-# Lecture 3: Logistic Regression & Regularization
-
----
-
-## 1. Logistic Regression
-
-### Sigmoid (Logistic) Function
-$$g(z) = \frac{1}{1 + e^{-z}}, \quad 0 < g(z) < 1$$
-- $g(0) = 0.5$, $g(z) \to 1$ as $z \to +\infty$, $g(z) \to 0$ as $z \to -\infty$
-
-### Model
-$$f(x) = g(\hat{\beta}^T \hat{x}), \quad \hat{\beta} = [\beta_0; \beta], \quad \hat{x} = [1; x]$$
-
-### Probabilistic Interpretation
-$$f(x) = P(y=1 \mid x;\hat{\beta}), \quad 1 - f(x) = P(y=0 \mid x;\hat{\beta})$$
-
-### Prediction Rule
-- Predict $y = 1$ if $f(x) \geq 0.5$, i.e., $\hat{\beta}^T\hat{x} \geq 0$
-- Predict $y = 0$ if $f(x) < 0.5$, i.e., $\hat{\beta}^T\hat{x} < 0$
-
-### Decision Boundary
-$$\beta_0 + \beta^T x = 0$$
-| Features $p$ | Boundary shape |
-|---|---|
-| 1 | Point |
-| 2 | Line |
-| 3 | Plane |
-| general | $(p-1)$-dimensional subspace |
-
----
-
-## 2. Cost Function (Negative Log-Likelihood)
-
-### Per-sample cost
-$$-y_i \log(f(x_i)) - (1-y_i)\log(1 - f(x_i)) = \begin{cases} -\log(f(x_i)) & \text{if } y_i=1 \\ -\log(1-f(x_i)) & \text{if } y_i=0 \end{cases}$$
-
-### Total cost (simplified form)
-$$L(\beta_0, \beta) = \sum_{i=1}^n \log(1 + e^{\beta_0 + \beta^T x_i}) - y_i(\beta_0 + \beta^T x_i)$$
-
----
-
-## 3. Gradient of the Cost Function
-
-$$\frac{\partial L}{\partial \beta_0} = \sum_{i=1}^n (f(x_i) - y_i)$$
-
-$$\frac{\partial L}{\partial \beta_j} = \sum_{i=1}^n (f(x_i) - y_i)\, x_{ij}, \quad j = 1, \dots, p$$
-
-> **Note:** Same form as linear regression gradient, but $f(x_i)$ is the sigmoid output.
-
----
-
-## 4. Multi-class: One-vs-Rest
-
-For $K$ classes, train $K$ binary classifiers $f_1, \dots, f_K$.  
-Predict class $k^* = \arg\max_k f_k(x)$.
-
----
-
-## 5. Regularization
-
-### Ridge (L2)
-$$\text{Regularizer: } \lambda\|\beta\|^2 = \lambda\sum_{j=1}^p \beta_j^2$$
-- Differentiable; shrinks all $\beta_j$ toward 0 but rarely to exactly 0.
-
-**Logistic + Ridge:**
-$$\min \sum_{i=1}^n \log(1+e^{\beta_0+\beta^Tx_i}) - y_i(\beta_0+\beta^Tx_i) + \lambda\sum_{j=1}^p \beta_j^2$$
-
-**Linear + Ridge (Normal Equation**, assuming $\beta_0 = 0$):
-$$\min_\beta \frac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|^2$$
-$$\Rightarrow \quad \beta = (2\lambda I + X^TX)^{-1}X^TY$$
-
----
-
-### Lasso (L1)
-$$\text{Regularizer: } \lambda\|\beta\|_1 = \lambda\sum_{j=1}^p |\beta_j|$$
-- Non-differentiable; forces some $\beta_j$ to exactly **zero** → feature selection.
-- Gradient descent **not applicable**; requires specialised solvers.
-
-**Lasso problem:**
-$$\min_{\beta \in \mathbb{R}^p} \frac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|_1$$
-
----
-
-## 6. Ridge vs. Lasso Summary
-
-| | Ridge | Lasso |
-|---|---|---|
-| Penalty | $\lambda\|\beta\|^2$ | $\lambda\|\beta\|_1$ |
-| Differentiable | ✅ | ❌ |
-| Shrinks $\beta_j$ | Toward 0 | To exactly 0 |
-| Feature selection | ❌ | ✅ |
-| Solver | Gradient descent / Normal eq. | Specialised (e.g. proximal) |
-
-> **Larger $\lambda$** → stronger regularization → simpler model (risk of underfitting).  
-> **Smaller $\lambda$** → weaker regularization → more complex model (risk of overfitting).
-
----
-
-# Lecture 4: Proximal Gradient Method
-
----
-
-## 1. Norms
-
-| Norm | Definition |
-|------|-----------|
-| ℓ₁ | ‖x‖₁ = Σᵢ \|xᵢ\| |
-| ℓ₂ | ‖x‖₂ = √(Σᵢ xᵢ²) |
-| ℓ∞ | ‖x‖∞ = maxᵢ \|xᵢ\| |
-| ℓp | ‖x‖p = (Σᵢ \|xᵢ\|ᵖ)^(1/p) |
-| Frobenius | ‖A‖²_F = ⟨A, A⟩ = Tr(AᵀA) |
-
-**Inner product (matrices):** ⟨A, B⟩ = Tr(AᵀB) = Σᵢ Σⱼ Aᵢⱼ Bᵢⱼ
-
-**Inner product (vectors):** ⟨x, y⟩ = xᵀy = Σᵢ xᵢ yᵢ
-
----
-
-## 2. Projection onto Closed Convex Set C
-
-```
-ΠC(z) = argmin  ½‖x − z‖²
-          x ∈ C
-```
-
-**Characterisation:**  x\* = ΠC(z)  ⟺  ⟨z − x\*, x − x\*⟩ ≤ 0  for all x ∈ C
-
-| Set C | ΠC(z) |
-|-------|--------|
-| ℝⁿ₊ (positive orthant) | max{z, 0}  (elementwise) |
-| ℓ₂-ball { ‖x‖₂ ≤ 1 } | z / max{‖z‖₂ , 1} |
-| 𝕊ⁿ₊ (PSD cone), A = QΛQᵀ | Q · diag(max{λᵢ, 0}) · Qᵀ |
-
----
-
-## 3. Normal Cone
-
-```
-NC(x̄) = { z  |  ⟨z, x − x̄⟩ ≤ 0  for all x ∈ C }
-```
-
-**Key equivalence:**  u ∈ NC(y)  ⟺  y = ΠC(y + u)
-
-**Property:** If x̄ ∈ int(C), then NC(x̄) = {0}
-
-**Example — C = [0, 1]:**
-
-| x̄ | NC(x̄) |
-|----|--------|
-| 0 | (−∞, 0] |
-| 1 | [0, +∞) |
-| (0, 1) | {0} |
-| x̄ ∉ C | ∅ |
-
-**Example — C = { x ∈ ℝ² : ‖x‖ ≤ 1 }:**
-
-| x̄ | NC(x̄) |
-|----|--------|
-| ‖x̄‖ = 1 | { λx̄ : λ ≥ 0 } |
-| ‖x̄‖ < 1 | {0} |
-
----
-
-## 4. Subdifferential
-
-```
-∂f(x) = { v  |  f(z) ≥ f(x) + ⟨v, z − x⟩  for all z }
-```
-
-- If f differentiable at x: **∂f(x) = {∇f(x)}**
-- **Global optimality:** x̄ is a global minimiser  ⟺  **0 ∈ ∂f(x̄)**
-- **Indicator function:** ∂δC(x) = NC(x)  for x ∈ C
-
-**Example — f(x) = |x|:**
-
-| x | ∂f(x) |
-|---|--------|
-| x < 0 | {−1} |
-| x = 0 | [−1, 1] |
-| x > 0 | {1} |
-
-**Lasso sparsity condition** — at optimum β:
-
-```
-βᵢ < 0  ⟹  [Xᵀ(Xβ − Y)]ᵢ =  λ
-βᵢ = 0  ⟺  |[Xᵀ(Xβ − Y)]ᵢ| ≤ λ   ← sparsity!
-βᵢ > 0  ⟹  [Xᵀ(Xβ − Y)]ᵢ = −λ
-```
-
----
-
-## 5. Fenchel Conjugate
-
-```
-f*(y) = sup { ⟨y, x⟩ − f(x) }
-         x
-```
-
-**f\* is always convex and closed** (even if f is not).
-
-If f is closed proper convex, then (f\*)\* = f.
-
-**Key triple equivalence:**
-
-```
-f(x) + f*(y) = ⟨x, y⟩  ⟺  y ∈ ∂f(x)  ⟺  x ∈ ∂f*(y)
-```
-
-**Examples:**
-
-| f(x) | f\*(y) |
-|------|--------|
-| ‖x‖₁ | δC(y),  C = { y : ‖y‖∞ ≤ 1 } |
-| δC(x) (indicator) | sup{ ⟨y, x⟩ : x ∈ C }  (support function) |
-
----
-
-## 6. Moreau Envelope & Proximal Operator
-
-```
-Pf(x) = argmin { f(y) + ½‖y − x‖² }    ← proximal mapping
-          y
-
-Mf(x) =  min  { f(y) + ½‖y − x‖² }    ← Moreau envelope
-          y
-```
-
-**Properties:**
-
-- ∇Mf(x) = x − Pf(x)  &nbsp; (Mf is always differentiable)
-- argmin f = argmin Mf
-- Pδ\_C(x) = ΠC(x)
-
-**Moreau Decomposition:**
-
-```
-x        = Pf(x) + Pf*(x)
-½‖x‖²   = Mf(x) + Mf*(x)
-```
-
-**Soft Thresholding** — prox of f(x) = λ|x|:
-
-```
-Pf(x) = Sλ(x) = sign(x) · max{ |x| − λ, 0 }
-```
-
-Applied elementwise to x = [x₁; …; xₙ]:
-
-```
-[Sλ(x)]ᵢ = sign(xᵢ) · max{ |xᵢ| − λ, 0 }
-```
-
-**Huber function** (Moreau envelope of f(x) = λ|x|):
-
-```
-Mf(x) = ½x²           if |x| ≤ λ
-         λ|x| − λ²/2   if |x| > λ
-```
-
----
-
-## 7. Proximal Gradient (PG) Method
-
-**Problem:** min f(β) + g(β),  where f is smooth and g is convex non-smooth.
-
-**Key insight** — gradient step on f only, then prox on g:
-
-```
-β^(k+1) = Pαg( β^(k) − α∇f(β^(k)) )
-```
-
-**Algorithm:**
-
-```
-choose β^(0),  step size α > 0
-repeat:
-    β^(k+1) = Pαg( β^(k) − α∇f(β^(k)) )
-until convergence
-```
-
-**Convergence:** f(β^(k)) + g(β^(k)) − optimal ≤ O(1/k)
-
----
-
-## 8. Accelerated Proximal Gradient (APG) Method
-
-**Algorithm (FISTA-style):**
-
-```
-choose β^(0),  step size α > 0,  t₀ = t₁ = 1
-repeat:
-    β̄^(k)   = β^(k) + (tₖ − 1)/t_{k+1} · (β^(k) − β^(k−1))   ← momentum
-    β^(k+1) = Pαg( β̄^(k) − α∇f(β̄^(k)) )
-    t_{k+1} = ( 1 + √(1 + 4tₖ²) ) / 2
-until convergence
-```
-
-**Convergence:** f(β^(k)) + g(β^(k)) − optimal ≤ O(1/k²)
-
-**Step size rule:** α ∈ (0, 1/L),  where L = Lipschitz constant of ∇f
-
----
-
-## 9. APG Applied to Lasso
-
-```
-min  ½‖Xβ − Y‖²  +  λ‖β‖₁
- β
-```
-
-- ∇f(β) = Xᵀ(Xβ − Y)
-- Lipschitz constant: L = λ\_max(XᵀX)
-- Step size: α = 1/L
-
-**Iteration:**
-
-```
-β̄^(k)   = β^(k) + (tₖ − 1)/t_{k+1} · (β^(k) − β^(k−1))
-
-β^(k+1) = S_{λ/L}( β̄^(k) − (1/L) · Xᵀ(Xβ̄^(k) − Y) )
-```
-
-**Optimality condition:**  β\* is optimal  ⟺  β\* = Pg(β\* − ∇f(β\*))
-
-**Stopping criterion** (tolerance ε > 0):
-
-```
-‖ β^(k) − Sλ( β^(k) − Xᵀ(Xβ^(k) − Y) ) ‖ < ε
-```
-
----
-
-## 10. Complexity Summary
-
-| Method | Convergence rate | Iterations to 10⁻⁴ error |
-|--------|-----------------|--------------------------|
-| PG | O(1/k) | ~O(10⁴) |
-| APG | O(1/k²) | ~O(10²) |
-
-- APG has the **same per-iteration cost** as PG (one prox + one gradient eval)
-- **Restart trick:** rerun APG every 100–200 iterations from the latest iterate
-
----
-
-# Lecture 5: SVM
-
----
-
-## 1. SVM Basics
-
-**Setup:** Data $(x_i, y_i)$ where $x_i \in \mathbb{R}^p$, $y_i \in \{-1, 1\}$, classes assumed **linearly separable**.
-
-**Classifier:** $f(x) = \text{sign}(\beta^T x + \beta_0)$
-
-**Distance of point $x$ to hyperplane** $H = \{\beta^T x + \beta_0 = 0\}$:
-$$d = \frac{|\beta^T x + \beta_0|}{\|\beta\|}$$
-
-**Margin** (distance to closest point from hyperplane):
-$$\gamma = \min_{i=1,\ldots,n} \frac{|\beta^T x_i + \beta_0|}{\|\beta\|}$$
-
----
-
-## 2. SVM Primal Problem
-
-$$\min_{\beta, \beta_0} \frac{1}{2}\|\beta\|^2 \quad \text{s.t.} \quad y_i(\beta^T x_i + \beta_0) \geq 1, \quad \forall i \in [n]$$
-
-- Margin = $\frac{1}{\|\beta\|}$ at optimum
-- **Support vectors**: points $x_i$ where $y_i(\beta^T x_i + \beta_0) = 1$ (tight constraint)
-
----
-
-## 3. KKT Conditions (General)
-
-For primal $\min f(x)$ s.t. $g_i(x)=0$, $h_j(x) \leq 0$, the **KKT conditions** at a regular point $x^*$ are:
-
-| Condition | Equation |
-|---|---|
-| Stationarity | $\nabla f(x^*) + \sum v_i^* \nabla g_i(x^*) + \sum u_j^* \nabla h_j(x^*) = 0$ |
-| Primal feasibility | $g_i(x^*)=0$, $h_j(x^*) \leq 0$ |
-| Dual feasibility | $u_j^* \geq 0$ |
-| Complementary slackness | $u_j^* h_j(x^*) = 0$ |
-
-**Lagrangian:** $L(x,v,u) = f(x) + \sum v_i g_i(x) + \sum u_j h_j(x)$
-
-**Dual function** (always concave): $\theta(v,u) = \min_x L(x,v,u)$
-
-**Weak duality:** $\theta(v,u) \leq f(x)$ for any dual-feasible $(v,u)$ and primal-feasible $x$
-
-**Strong duality** holds under: convex $f, h_j$; affine $g_i$; and **Slater's condition** ($\exists \hat{x}$: $g_i(\hat{x})=0$, $h_j(\hat{x}) < 0$).
-
----
-
-## 4. SVM Dual Problem
-
-**Lagrangian** (with $\alpha \in \mathbb{R}^n_+$):
-$$L(\beta,\beta_0,\alpha) = \frac{1}{2}\|\beta\|^2 + \sum_{i=1}^n \alpha_i(1 - y_i(\beta^T x_i + \beta_0))$$
-
-Setting $\frac{\partial L}{\partial \beta} = 0$ and $\frac{\partial L}{\partial \beta_0} = 0$ gives:
-$$\beta^* = \sum_{i=1}^n \alpha_i y_i x_i \qquad \sum_{i=1}^n \alpha_i y_i = 0$$
-
-**Dual problem:**
-$$\max_\alpha \sum_{i=1}^n \alpha_i - \frac{1}{2}\sum_{i,j=1}^n \alpha_i \alpha_j y_i y_j \langle x_i, x_j \rangle \quad \text{s.t.} \quad \sum_{i=1}^n \alpha_i y_i = 0,\; \alpha_i \geq 0$$
-
-**Recovering primal from dual:**
-$$\beta^* = \sum_{i=1}^n \alpha_i^* y_i x_i \qquad \beta_0^* = y_k - \sum_{i=1}^n \alpha_i^* y_i \langle x_i, x_k\rangle \text{ for any } k \text{ with } \alpha_k^* > 0$$
-
-**Complementary slackness:** $\alpha_i^* > 0 \Rightarrow y_i((\beta^*)^T x_i + \beta_0^*) = 1$ (i.e., $x_i$ is a support vector)
-
-**Decision boundary** (test point $x$):
-$$f(x) = \text{sign}\!\left(\sum_{i:\,\alpha_i^*>0} \alpha_i^* y_i \langle x_i, x\rangle + \beta_0^*\right)$$
-
----
-
-## 5. Kernels
-
-Replace $\langle x_i, x_j \rangle \to K(x_i, x_j) = \langle \phi(x_i), \phi(x_j)\rangle$ in the dual.
-
-| Kernel | Formula |
-|---|---|
-| Linear | $K(a,b) = a^T b$ |
-| Homogeneous polynomial degree $d$ | $K(a,b) = (a^T b)^d$ |
-| Inhomogeneous polynomial degree $d$ | $K(a,b) = (a^T b + 1)^d$ |
-| Gaussian (RBF) | $K(a,b) = \exp\!\left(-\frac{\|a-b\|^2}{2\sigma^2}\right)$ |
-
-**Key point:** Computing $K(a,b)$ is $O(p)$; computing $\phi(a)$ explicitly can be $O(p^2)$ or higher.
-
----
-
-## 6. Soft-Margin SVM
-
-When classes are **not separable**, introduce slack $\varepsilon_i \geq 0$:
-
-$$\min_{\beta,\beta_0,\varepsilon} \frac{1}{2}\|\beta\|^2 + C\sum_{i=1}^n \varepsilon_i \quad \text{s.t.} \quad y_i(\beta^T x_i + \beta_0) \geq 1 - \varepsilon_i,\; \varepsilon_i \geq 0$$
-
-Equivalent unconstrained form (**hinge loss**):
-$$\min_{\beta,\beta_0} \frac{1}{2}\|\beta\|^2 + C\sum_{i=1}^n \max\{1 - y_i(\beta^T x_i + \beta_0),\, 0\}$$
-
-**Soft-margin dual:**
-$$\max_\alpha \sum_{i=1}^n \alpha_i - \frac{1}{2}\sum_{i,j=1}^n \alpha_i\alpha_j y_i y_j\langle x_i,x_j\rangle \quad \text{s.t.} \quad \sum_{i=1}^n \alpha_i y_i = 0,\; 0 \leq \alpha_i \leq C$$
-
-> $C$ controls the margin–violation trade-off. Large $C$ = hard margin.
-
----
-
-## 7. SVM vs. Logistic Regression
-
-| | SVM (soft) | Logistic Regression |
-|---|---|---|
-| Loss | $\max\{1-z, 0\}$ (hinge) | $\log(1+e^{-z})$ (logistic) |
-| Regularization | $\frac{1}{2}\|\beta\|^2$ | $\lambda\|\beta\|^2$ |
-| Target | $z = y_i(\beta^T x_i + \beta_0) \geq 1$ | $z \gg 0$ |
-
-Logistic loss is a smooth approximation to hinge loss.
-
----
-
-## Quick Reference: Deriving a Dual
-
-1. Write the **Lagrangian** $L$ with multipliers ($\geq 0$ for $\leq 0$ constraints)
-2. Set $\nabla_x L = 0$ to find $x^*$ in terms of multipliers
-3. Substitute back to get **dual function** $\theta$
-4. Maximize $\theta$ subject to multiplier constraints → **dual problem**
-
----
-
-# Lecture 6: Block Coordinate Descent (BCD)
-
----
-
-## Target Problem
-
-$$\min_{x \in \mathbb{R}^n} F(x) = f(x) + \sum_{i=1}^{n} r_i(x_i)$$
-
-- $f$: convex, differentiable (smooth part)
-- $r_i(x_i)$: closed proper convex, **separable** (non-smooth part)
-
----
-
-## Coordinate-wise Minimizer
-
-**Definition:** $\bar{x}$ is a coordinate-wise minimizer if $\bar{x} \in \text{dom}f$ and:
-
-$$f(\bar{x} + d e_i) \geq f(\bar{x}) \quad \forall\, i \in [n],\; d \in \mathbb{R}$$
-
-Equivalently, for each $i$:
-
-$$\bar{x}_i \in \arg\min_{x_i} f(\bar{x}_1, \ldots, \bar{x}_{i-1}, x_i, \bar{x}_{i+1}, \ldots, \bar{x}_n)$$
-
-### When does coordinate-wise min ⟹ global min?
-
-| Condition | Result |
-|---|---|
-| $f$ differentiable at $\bar{x}$ | ✅ coord-wise min ⟹ global min (since $\nabla_i f(\bar{x})=0\ \forall i \Rightarrow \nabla f(\bar{x})=0$) |
-| $f$ non-differentiable, non-separable | ❌ not guaranteed |
-| $f$ non-differentiable, **separable** $r_i(x_i)$ | ✅ coord-wise min ⟹ global min |
-
----
-
-## Coordinate Descent Algorithm
-
-Cycle through $i = 1, 2, \ldots, n$ and solve one 1D subproblem at a time:
-
-$$x_i^{(k+1)} \leftarrow \arg\min_{x_i}\ f(x_1^{(k+1)}, \ldots, x_{i-1}^{(k+1)},\; x_i,\; x_{i+1}^{(k)}, \ldots, x_n^{(k)}) + r_i(x_i)$$
-
-> Use updated values $x_1^{(k+1)}, \ldots, x_{i-1}^{(k+1)}$ immediately. **Cannot be parallelised.**
-
----
-
-## Key Tools for Derivations
-
-**Optimality condition** (convex $f$):
-$$x^* \in \arg\min f(x) \iff 0 \in \partial f(x^*)$$
-
-**Proximal mapping:**
-$$P_{\alpha g}(x) = \arg\min_y \left\{ g(y) + \tfrac{1}{2}\|y - x\|^2 \right\}$$
-
-**Characterisation:**
-$$y = P_g(x) \iff x \in y + \partial g(y)$$
-
-**Special cases:**
-$$P_{\lambda|\cdot|}(x) = S_\lambda(x) \qquad P_{\delta_C}(x) = \Pi_C(x)$$
-
-**Soft-thresholding operator:**
-$$S_\lambda(t) = \text{sign}(t)\cdot\max\{|t| - \lambda,\; 0\}$$
-
-**Subdifferential of $|\cdot|$ at 0:**
-$$\partial|0| = [-1, 1]$$
-
----
-
-## Application 1: Linear Regression
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2$$
-
-**Update rule:**
-$$\beta_i \leftarrow \frac{X_{\cdot i}^T (Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2} = \beta_i - \frac{X_{\cdot i}^T(X\beta - Y)}{\|X_{\cdot i}\|^2}$$
-
-> Parameter-free (no step size). $X_{-i}$ = $X$ with $i$-th column removed; $\beta_{-i}$ = $\beta$ with $i$-th entry removed.
-
----
-
-## Application 2: Lasso
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|_1, \quad \lambda > 0$$
-
-Non-differentiable term is separable: $\lambda\|\beta\|_1 = \sum_{i=1}^p \lambda|\beta_i|$
-
-**Update rule:**
-$$\beta_i \leftarrow S_{\lambda / \|X_{\cdot i}\|^2}\!\left(\frac{X_{\cdot i}^T(Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2}\right)$$
-
-> Same inner quantity as linear regression, wrapped in soft-thresholding. Produces sparse solutions.
-
----
-
-## Application 3: Box-Constrained Regression
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2 \quad \text{s.t.}\ l \leq \beta \leq u$$
-
-Indicator $\delta_C(\beta) = \sum_i \delta_{C_i}(\beta_i)$ is separable.
-
-**Update rule:**
-$$\beta_i \leftarrow \Pi_{C_i}\!\left(\frac{X_{\cdot i}^T(Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2}\right)$$
-
-**Clipping (projection onto $[l_i, u_i]$):**
-$$\Pi_{C_i}(t) = \begin{cases} u_i & t > u_i \\ t & l_i \leq t \leq u_i \\ l_i & t < l_i \end{cases}$$
-
----
-
-## Application 4: SVM — SMO
-
-BCD in **blocks of 2**. Select pair $(\alpha_i, \alpha_j)$ violating KKT, then solve:
-
-$$\min_{\alpha_1, \alpha_2}\ \tfrac{1}{2}K_{11}\alpha_1^2 + \tfrac{1}{2}K_{22}\alpha_2^2 + y_1 y_2 K_{12}\alpha_1\alpha_2 - \alpha_1 - \alpha_2$$
-$$\text{s.t.}\quad y_1\alpha_1 + y_2\alpha_2 = \zeta,\quad 0 \leq \alpha_1 \leq C,\quad 0 \leq \alpha_2 \leq C$$
-
-> Reduces to a 1D quadratic over an interval → closed-form solution. Pairs are required to maintain $\sum_i \alpha_i y_i = 0$.
-
-**KKT (complementary slackness) conditions:**
-
-| $\alpha_i$ | Margin condition |
-|---|---|
-| $\alpha_i = 0$ | $y_i(\beta^T x_i + \beta_0) \geq 1$ |
-| $0 < \alpha_i < C$ | $y_i(\beta^T x_i + \beta_0) = 1$ |
-| $\alpha_i = C$ | $y_i(\beta^T x_i + \beta_0) \leq 1$ |
-
----
-
-## Application 5: Parallel Projections
-
-Find $x \in C_1 \cap C_2 \cap \cdots \cap C_m$ via:
-
-$$\min_{x,\, y_i}\ \tfrac{1}{2}\sum_{i=1}^m \|y_i - x\|^2 \quad \text{s.t.}\ y_i \in C_i$$
-
-**BCD updates (repeats until convergence):**
-$$y_i \leftarrow \Pi_{C_i}(x) \quad \text{for } i = 1, \ldots, m \qquad \text{(parallelisable)}$$
-$$x \leftarrow \frac{1}{m}\sum_{i=1}^m y_i$$
-
----
-
-## Summary: CD vs Gradient Descent
-
-| | Coordinate Descent | Gradient Descent |
-|---|---|---|
-| Step size | Not needed | Required ($\alpha$) |
-| Per-iteration cost | 1D subproblem | Full gradient $\nabla f$ |
-| Parallelisable | ❌ No | ✅ Yes |
-| Typical convergence | Fewer iterations | More iterations (fixed $\alpha$) |
-
----
-
-# Lecture 7: NMF
-
-## Core Problem
-$$\min_{W,H} \frac{1}{2}\|V - WH\|_F^2 \quad \text{s.t.} \quad W \geq 0,\ H \geq 0$$
-
-| Matrix | Dimensions | Role |
-|--------|-----------|------|
-| V | m × n | Data (columns = data points) |
-| W | m × r | Basis vectors |
-| H | r × n | Coordinates/coefficients |
-
-**Bi-convex** (non-convex jointly, but convex in W or H separately).
-
----
-
-## Variants
-
-| Variant | Extra Constraint | Use Case |
-|---------|-----------------|----------|
-| Standard NMF | — | General |
-| Orthogonal NMF | $HH^T = I_r$ | Hard clustering |
-| Symmetric NMF | $H = W^T$, so $V \approx WW^T$ | Community detection |
-| Sparse NMF | $+ \lambda_W\|W\|_1 + \lambda_H\|H\|_1$ | Localized features |
-
-**Key lemma (Orthogonal NMF):** $H \geq 0$ and $HH^T = I_r$ ⟹ each column of $H$ has **at most one positive entry**.
-
----
-
-## Algorithms
-
-### BCD / HALS
-Update columns of W, then rows of H cyclically:
-
-$$W_{\cdot i} \leftarrow \Pi_+\!\left(\frac{(V - W_{\cdot(-i)}H_{(-i)\cdot})\,H_{i\cdot}^T}{\|H_{i\cdot}\|^2}\right), \qquad H_{i\cdot} \leftarrow \Pi_+\!\left(\frac{W_{\cdot i}^T(V - W_{\cdot(-i)}H_{(-i)\cdot})}{\|W_{\cdot i}\|^2}\right)$$
-
-### Proximal Gradient (PG)
-$$W^{(k+1)} = \Pi_+\!\left(W^{(k)} + \alpha_k R^{(k)}(H^{(k)})^T\right), \qquad H^{(k+1)} = \Pi_+\!\left(H^{(k)} + \alpha_k (W^{(k)})^T R^{(k)}\right)$$
-where $R^{(k)} = V - W^{(k)}H^{(k)}$.
-
-### Multiplicative Update (MU)
-$$W \leftarrow W \odot \frac{VH^T}{WHH^T}, \qquad H \leftarrow H \odot \frac{W^TV}{W^TWH}$$
-
-### ALS (default in sklearn)
-Solve unconstrained least squares for H, then W; project onto $\mathbb{R}^+$ after each step.
-
----
-
-## Key Equations
-
-| Item | Formula |
+| Rule | Formula |
 |------|---------|
-| Frobenius norm | $\|A\|_F^2 = \text{Tr}(A^TA) = \sum_{i,j}A_{ij}^2$ |
-| $\ell_1$ norm | $\|A\|_1 = \sum_{i,j}\|A_{ij}\|$ |
-| Gradient w.r.t. W | $\nabla_W f = -(V-WH)H^T$ |
-| Gradient w.r.t. H | $\nabla_H f = -W^T(V-WH)$ |
-| Projection | $\Pi_+(x) = \max(x,\, 0)$ element-wise |
-| Rank inequality | $\text{rank}(V) \leq \text{rank}_+(V) \leq \min(m,n)$ |
+| Product | $e^a \cdot e^b = e^{a+b}$ |
+| Quotient | $e^a / e^b = e^{a-b}$ |
+| Power | $(e^a)^b = e^{ab}$ |
+| Log product | $\log(ab) = \log a + \log b$ |
+| Log quotient | $\log(a/b) = \log a - \log b$ |
+| Log power | $\log(a^b) = b\log a$ |
+| Inverse | $\log(e^x) = x$, $\quad e^{\log x} = x$ |
+| Change of base | $\log_b a = \dfrac{\ln a}{\ln b}$ |
 
----
+### Key Values
+$$e^0 = 1, \quad e^1 \approx 2.718, \quad \log 1 = 0, \quad \log 0 = -\infty$$
 
-## Cluster Membership Rules
+### Softmax Connection
+$$\text{softmax}(\mathbf{z})_k = \frac{e^{z_k}}{\sum_j e^{z_j}}$$
+Numerically stable version: subtract $\max_j z_j$ before exponentiating.
 
-- **Orthogonal / Standard NMF:** point $j \in$ cluster $k$ if $H_{kj} > H_{ij}\ \forall i \neq k$
-- **Symmetric NMF:** node $j \in$ community $k$ if $W_{jk} > W_{ji}\ \forall i \neq k$
+### Log-Sum-Exp Trick
+$$\log \sum_j e^{z_j} = c + \log \sum_j e^{z_j - c}, \quad c = \max_j z_j$$
+Avoids overflow/underflow; used in cross-entropy implementations.
 
----
+## 2. Differentiation
 
-# Lecture 8: Recommendation Systems & Matrix Completion
+### Basic Rules
 
-## 1. Utility Matrix and Core Concepts
+| Rule | Formula |
+|------|---------|
+| Power | $\dfrac{d}{dx} x^n = nx^{n-1}$ |
+| Exponential | $\dfrac{d}{dx} e^x = e^x$ |
+| Exponential (chain) | $\dfrac{d}{dx} e^{f(x)} = f'(x)\,e^{f(x)}$ |
+| Log | $\dfrac{d}{dx} \ln x = \dfrac{1}{x}$ |
+| Chain rule | $\dfrac{dz}{dx} = \dfrac{dz}{dy}\dfrac{dy}{dx}$ |
+| Product rule | $\dfrac{d}{dx}[f \cdot g] = f'g + fg'$ |
+| Quotient rule | $\dfrac{d}{dx}\!\left[\dfrac{f}{g}\right] = \dfrac{f'g - fg'}{g^2}$ |
 
-### Definition
-- **Utility Matrix R**: m × n matrix where R_ij = rating of user i on item j
-- **Ω**: Index set of known entries: Ω = {(i,j) | R_ij is known}
-- **Sparsity**: Most entries are unknown (blanks)
+### Activation Function Derivatives
 
-### Goal
-Predict missing ratings (blank entries) in the utility matrix
+| Activation | $g(z)$ | $g'(z)$ |
+|------------|--------|---------|
+| Sigmoid | $\sigma(z) = \dfrac{1}{1+e^{-z}}$ | $\sigma(z)(1-\sigma(z))$ |
+| Tanh | $\tanh(z)$ | $1 - \tanh^2(z)$ |
+| ReLU | $\max(0,z)$ | $\mathbf{1}[z > 0]$ |
+| Leaky ReLU | $z$ if $z\geq0$, else $\delta z$ | $1$ if $z\geq0$, else $\delta$ |
+| Softmax $k$ | $\dfrac{e^{z_k}}{\sum_j e^{z_j}}$ | $s_k(1 - s_k)$ (diagonal); $-s_i s_j$ (off-diagonal) |
 
-## 2. Collaborative Filtering (CF)
+> **Sigmoid saturation:** $\sigma'(z) \to 0$ as $|z| \to \infty$ — causes **vanishing gradients** in deep networks.
 
-### A. User-User CF
+### Multivariate Chain Rule (Backprop)
 
-**Step 1: Find Similar Users**
-For user x, identify neighborhood N_x using similarity metrics:
+For $f: \mathbb{R}^m \to \mathbb{R}^n$, $g: \mathbb{R}^n \to \mathbb{R}$:
 
-#### Similarity Measures:
+$$\nabla_{\mathbf{x}} z = \left(\frac{\partial \mathbf{y}}{\partial \mathbf{x}}\right)^{\!T} \nabla_{\mathbf{y}} z$$
 
-**Jaccard Similarity** (for binary matrices)
-$$\text{Sim}(x,y) = \frac{|S_x \cap S_y|}{|S_x \cup S_y|} \in [0,1]$$
+where $\dfrac{\partial \mathbf{y}}{\partial \mathbf{x}}$ is the **Jacobian** ($n \times m$ matrix).
 
-Where S_x = items rated by user x
+### Gradient of Common Loss Functions
 
-**Cosine Similarity**
-$$\text{Sim}(x,y) = \frac{r_x^T r_y}{||r_x|| \cdot ||r_y||} \in [0,1]$$
+| Loss | $L(y, \hat{y})$ | $\partial L / \partial \hat{y}$ |
+|------|----------------|-------------------------------|
+| MSE | $\tfrac{1}{2}(y - \hat{y})^2$ | $\hat{y} - y$ |
+| Cross-entropy | $-\sum_k y_k \log \hat{y}_k$ | $-y_k / \hat{y}_k$ |
+| BCE | $-[y\log\hat{y} + (1-y)\log(1-\hat{y})]$ | $\dfrac{\hat{y}-y}{\hat{y}(1-\hat{y})}$ |
 
-(Treat blanks as 0)
+> **Softmax + cross-entropy:** gradient simplifies cleanly to $\hat{y}_k - y_k$.
 
-**Normalized Cosine Similarity**
-$$\text{Sim}(x,y) = \frac{(r_x - \bar{r}_x)^T(r_y - \bar{r}_y)}{||r_x - \bar{r}_x|| \cdot ||r_y - \bar{r}_y||} \in [-1,1]$$
+## 3. Matrix & Vector Operations
 
-Where $\bar{r}_x$ = average rating of user x
-
-**Step 2: Predict Rating**
-
-For user x's rating on item i:
-
-- **Naive Average**: 
-$$r_{xi} = \frac{1}{|N(x,i)|} \sum_{y \in N(x,i)} r_{yi}$$
-
-- **Weighted Average**:
-$$r_{xi} = \frac{\sum_{y \in N(x,i)} \text{Sim}(x,y) \cdot r_{yi}}{\sum_{y \in N(x,i)} \text{Sim}(x,y)}$$
-
-Where N(x,i) = {y ∈ N_x | r_yi exists}
-
-### B. Item-Item CF
-
-Similar to user-user, but find similar items instead:
-
-$$r_{xi} = \frac{\sum_{j \in N(i,x)} \text{Sim}(i,j) \cdot r_{xj}}{\sum_{j \in N(i,x)} \text{Sim}(i,j)}$$
-
-Where N(i,x) = {j ∈ N_i | r_xj exists}
-
-## 3. Latent Factor Model
-
-### Concept
-Assume the utility matrix has low-rank structure:
-$$R \approx WH$$
-
-Where:
-- **W** ∈ ℝ^(m×k): User-factor matrix (m users, k latent factors)
-- **H** ∈ ℝ^(k×n): Item-factor matrix (k latent factors, n items)
-- **k**: Number of latent factors (usually much smaller than m and n)
-
-### Prediction
-$$R_{ij} = W_{i·} H_{·j} = \sum_{t=1}^{k} W_{it} H_{tj}$$
-
-### Optimization Problem
-$$\min_{W,H} F(W,H) := \frac{1}{2}\sum_{(i,j)\in\Omega}(R_{ij} - W_{i·}H_{·j})^2 + \frac{\lambda}{2}(||W||_F^2 + ||H||_F^2)$$
-
-Where λ ≥ 0 is ridge regularization parameter
-
-### Gradient Descent
-$$W^{(k+1)} \leftarrow W^{(k)} - \alpha_k \nabla_W F(W^{(k)}, H^{(k)})$$
-$$H^{(k+1)} \leftarrow H^{(k)} - \alpha_k \nabla_H F(W^{(k)}, H^{(k)})$$
-
-### Gradients
-$$[\nabla_W F]_{it} = -\sum_{j:(i,j)\in\Omega}(R_{ij} - W_{i·}H_{·j})H_{tj} + \lambda W_{it}$$
-
-$$[\nabla_H F]_{tj} = -\sum_{i:(i,j)\in\Omega}(R_{ij} - W_{i·}H_{·j})W_{it} + \lambda H_{tj}$$
-
-### Stochastic Gradient Descent
-Evaluate gradients on single ratings instead of all, faster per step but needs more iterations
-
-## 4. Matrix Completion
-
-### Problem Definition
-Given partially observed matrix M with known entries in Ω, recover the complete matrix:
-
-$$\min_X \text{rank}(X) \quad \text{s.t.} \quad X_{ij} = M_{ij}, \forall(i,j) \in \Omega$$
-
-**This is NP-hard!**
-
-### Convex Relaxation using Nuclear Norm
-
-Since rank minimization is **NP-hard** (rank is non-convex), we replace it with its best convex approximation — the nuclear norm:
-
-$$\min_X \text{rank}(X) \quad \Rightarrow \quad \min_X \|X\|_*$$
-$$\text{s.t.} \quad X_{ij} = M_{ij} \qquad\qquad \text{s.t.} \quad X_{ij} = M_{ij}$$
-
-**Why it works**: Minimizing $\|X\|_* = \sum_i \sigma_i$ acts as an L1 penalty on singular values, pushing many to zero and reducing rank — analogous to how L1 promotes sparsity in vectors.
-
-**Theoretical backing**: Nuclear norm is the **convex envelope** of rank on $\{X \mid \sigma_1(X) \leq 1\}$ — the tightest possible convex approximation. Solved efficiently via SDP (Algorithm 1) or Proximal Gradient (Algorithm 2).
-
-## 5. Rank & Nuclear Norm
-
-### Rank Definition
-For X ∈ ℝ^(m×n), rank(X) is:
-- Dimension of column space
-- Dimension of row space  
-- Smallest k such that X = WH (W ∈ ℝ^(m×k), H ∈ ℝ^(k×n))
-- Number of non-zero singular values
-
-### Singular Value Decomposition (SVD)
-$$X = U\Sigma V^T$$
-
-Where:
-- **U** ∈ ℝ^(m×m): Orthogonal, columns are left singular vectors
-- **Σ** ∈ ℝ^(m×n): Diagonal, entries σ_i are singular values (σ_1 ≥ σ_2 ≥ ... ≥ σ_k ≥ 0)
-- **V** ∈ ℝ^(n×n): Orthogonal, columns are right singular vectors
-
-Compact form: $X = \sum_{i=1}^{k} \sigma_i u_i v_i^T$
-
-### Nuclear Norm Definition
-$$||X||_* = \sum_{i=1}^{\min(m,n)} \sigma_i(X)$$
-
-(Sum of all singular values)
-
-### Properties
-- **Convex** (is a norm)
-- **Non-convex counterpart**: rank(X) is non-convex
-- **Convex envelope**: Nuclear norm is the convex envelope of rank on {X | σ_1(X) ≤ 1}
-
-### Convex Relaxation
-Replace rank minimization with nuclear norm minimization:
-
-$$\min_X ||X||_* \quad \text{s.t.} \quad X_{ij} = M_{ij}, \forall(i,j) \in \Omega$$
-
-## 6. Recovery Guarantee (Informal)
-
-**Theorem**: Under certain assumptions, if:
-- True matrix rank = k
-- Observed entries uniformly at random
-- Number of observations ≥ C·n·k·log²(n)
-
-Then nuclear norm minimization recovers the true matrix with high probability.
-
-## 7. Semidefinite Program (SDP)
-
-### Standard SDP Form
-$$\min_{X \in S^n} \langle C, X \rangle$$
-$$\text{s.t.} \quad \langle A_i, X \rangle = b_i, \quad i \in [m]$$
-$$X \succeq 0$$
-
-Where:
-- **C, A_i** ∈ S^n (symmetric matrices)
-- **b** ∈ ℝ^m
-- **X ≻ 0** means X is positive semidefinite
-
-### SDP Dual
-$$\max_{y \in \mathbb{R}^m} \langle b, y \rangle$$
-$$\text{s.t.} \quad \sum_{i=1}^m y_i A_i \preceq C$$
-
-### Weak Duality
-For any primal feasible X and dual feasible y:
-$$\langle C, X \rangle \geq \langle b, y \rangle$$
-
-### Strong Duality
-If both primal and dual are strictly feasible, optimal values match.
-
-## 8. ALGORITHM 1: SDP-based Matrix Completion
-
-### Nuclear Norm as SDP
-$$||X||_* = \min_{W_1, W_2} \frac{1}{2}(\text{Tr}(W_1) + \text{Tr}(W_2))$$
-$$\text{s.t.} \quad \begin{bmatrix} W_1 & X \\ X^T & W_2 \end{bmatrix} \preceq 0$$
-
-### Matrix Completion SDP
-$$\min_{W_1, W_2, X} \frac{1}{2}(\text{Tr}(W_1) + \text{Tr}(W_2))$$
-$$\text{s.t.} \quad X_{ij} = M_{ij}, \quad (i,j) \in \Omega$$
-$$\begin{bmatrix} W_1 & X \\ X^T & W_2 \end{bmatrix} \preceq 0$$
-
-Can be solved by SDP solvers (SDPT3, Mosek, CVX)
-
-## 9. ALGORITHM 2: PROXIMAL GRADIENT (PG)
-
-### Penalized Problem
-$$\min_X ||X||_* + \frac{1}{2\mu}\sum_{(i,j)\in\Omega}(X_{ij} - M_{ij})^2$$
-
-Can rewrite as:
-$$\min_X \underbrace{\frac{1}{2}\sum_{(i,j)\in\Omega}(X_{ij} - M_{ij})^2}_{f(X) \text{ smooth}} + \underbrace{\mu||X||_*}_{g(X) \text{ nonsmooth}}$$
-
-### Gradient of f(X)
-$$[\nabla f(X)]_{ij} = \begin{cases} X_{ij} - M_{ij} & \text{if } (i,j) \in \Omega \\ 0 & \text{otherwise} \end{cases}$$
-
-### Proximal Mapping of Nuclear Norm
-$$P_{\mu||\cdot||_*}(Y) = \arg\min_X \left\{\mu||X||_* + \frac{1}{2}||X-Y||_F^2\right\}$$
-
-Computed via soft-thresholding of singular values:
-
-1. Compute SVD: $Y = U\text{Diag}(\sigma)V^T$
-2. Soft-threshold: $\gamma_i = \max(\sigma_i - \mu, 0)$
-3. Result: $P_{\mu||\cdot||_*}(Y) = U\text{Diag}(\gamma)V^T$
-
-### PG Algorithm
-```
-Input: M, μ, step size α
-Initialize: X ← 0
-For t = 1, 2, ...:
-  G ← ∇f(X)
-  X ← P_{μ||·||_*}(X - α·G)
-Output: X
-```
-
-**Note**: Each iteration requires SVD, which is expensive for large matrices.
-
-## 10. Netflix Prize model
-
-### Dataset
-- **Training**: 100,480,507 ratings from 480,189 users on 17,770 movies
-- **Testing**: 2,817,131 ratings (hidden)
-
-### Evaluation Metric
-$$\text{RMSE} = \sqrt{\sum_{(i,j) \in \text{Test}} (R_{ij} - R_{ij}^*)^2}$$
-
-### Baselines
-- **Trivial** (average): RMSE = 1.0540
-- **Netflix Cinematch**: RMSE = 0.9514 (10% improvement)
-- **Grand Prize**: RMSE ≤ 0.8563 (10% improvement over Cinematch)
-
-## 11. KEY TAKEAWAYS
-
-| Method | Pros | Cons |
-|--------|------|------|
-| User-User CF | Simple, interpretable | Doesn't scale well, new user problem |
-| Item-Item CF | Works well in practice | Requires similar items to exist |
-| Latent Factor | Scalable, handles cold start better | Needs optimization, non-convex |
-| Matrix Completion (NucNorm) | Theoretical guarantees, convex | Computationally expensive (SDP/PG) |
-
-## 12. QUICK REFERENCE: FORMULAS FOR CALCULATIONS
-
-**Jaccard**: $\frac{\|A \cap B\|}{\|A \cup B\|}$
-
-**Cosine**: $\frac{a \cdot b}{\|a\| \|b\|}$
-
-**Normalized Cosine**: $\frac{(a-\bar{a}) \cdot (b-\bar{b})}{\|a-\bar{a}\| \|b-\bar{b}\|}$
-
-**Weighted Average**: $\frac{\sum w_i x_i}{\sum w_i}$
-
-**SVD Reconstruction**: $X = U\Sigma V^T = \sum_i \sigma_i u_i v_i^T$
-
-**Nuclear Norm**: $\|X\|_* = \sum_i \sigma_i(X)$
-
-**Soft Threshold**: $\max(\sigma - \mu, 0)$
-
----
-
-# Lecture 9: PCA, Robust PCA & ADMM
-
-## 1. PCA
-
-**Goal:** Find direction $w$ with $\|w\| = 1$ of greatest variance in data $X \in \mathbb{R}^{n \times p}$.
-
-**Covariance matrix:**
-
-$$\Sigma = \frac{1}{n} \sum_{i=1}^{n} x_i x_i^T = \frac{1}{n} X^T X \quad \text{(assuming zero-mean data)}$$
-
-**Optimization problem:**
-
-$$\max_{w} \; w^T X^T X w \quad \text{s.t.} \quad \|w\| = 1$$
-
-Equivalent to maximizing the **Rayleigh quotient**:
-
-$$\max_{w} \; \frac{w^T X^T X w}{w^T w}$$
-
-**Solution:** $w$ = eigenvector of $X^T X$ with the **largest eigenvalue** $\lambda_1$.
-
-**Steps to find the principal subspace:**
-1. Compute $\Sigma = \frac{1}{n} \sum_{i=1}^{n} x_i x_i^T$
-2. Find eigenvalues via $\det(\Sigma - \lambda I) = 0$
-3. Find eigenvector $w$ for the largest $\lambda$ via $(\Sigma - \lambda I)w = 0$
-
-**$k$-th component:** eigenvector of $X^T X$ with the $k$-th largest eigenvalue.
-
-**Equivalent low-rank formulation:**
-
-$$\min_{L:\,\text{rank}(L)=r} \|X - L\|_F$$
-
-> ⚠️ PCA is **sensitive to outliers** — a few corrupted entries can distort the principal components.
-
-## 2. Robust PCA
-
-**Model:** $X = L_0 + S_0$, where $L_0$ is low-rank and $S_0$ is sparse.
-
-**Non-convex (NP-hard) formulation:**
-
-$$\min_{L,\,S} \; \text{rank}(L) + \lambda \|S\|_0 \quad \text{s.t.} \quad L + S = X$$
-
-**Convex relaxation:**
-
-$$\min_{L,\,S} \; \|L\|_* + \lambda \|S\|_1 \quad \text{s.t.} \quad L + S = X$$
-
-| Term | Meaning | Relaxes |
-|------|---------|---------|
-| $\|L\|_* = \text{tr}(\sqrt{L^T L})$ | Nuclear norm = sum of singular values | $\text{rank}(L)$ |
-| $\|S\|_1$ | Sum of absolute values of all entries | $\|S\|_0$ |
-
-**Recommended $\lambda$:**
-
-$$\lambda = \frac{1}{\sqrt{\max(m,\, n)}}$$
-
-## 3. ADMM
-
-**Target problem (2-block separable):**
-
-$$\min_{y,\,z} \; f(y) + g(z) \quad \text{s.t.} \quad Ay + Bz = c$$
-
-**Augmented Lagrangian** ($\sigma > 0$):
-
-$$\mathcal{L}_\sigma(y, z, x) = f(y) + g(z) + \langle x,\, Ay + Bz - c \rangle + \frac{\sigma}{2}\|Ay + Bz - c\|^2$$
-
-Using completing the square, equivalently:
-
-$$\mathcal{L}_\sigma(y, z, x) = f(y) + g(z) + \frac{\sigma}{2}\left\|Ay + Bz - c + \sigma^{-1}x\right\|^2 - \frac{1}{2\sigma}\|x\|^2$$
-
-**ADMM iterations:**
-
-$$y^{(k+1)} \leftarrow \arg\min_{y} \; \mathcal{L}_\sigma\!\left(y,\, z^{(k)},\, x^{(k)}\right)$$
-
-$$z^{(k+1)} \leftarrow \arg\min_{z} \; \mathcal{L}_\sigma\!\left(y^{(k+1)},\, z,\, x^{(k)}\right)$$
-
-$$x^{(k+1)} \leftarrow x^{(k)} + \tau\sigma\!\left(Ay^{(k+1)} + Bz^{(k+1)} - c\right)$$
-
-**Parameters:** $\sigma > 0$, $\quad 0 < \tau < \dfrac{1 + \sqrt{5}}{2} \approx 1.618$
-
-**Key completing-the-square identity:**
-
-$$\langle X, Y \rangle + \frac{\sigma}{2}\|Y\|^2 = \frac{\sigma}{2}\left\|Y + \sigma^{-1}X\right\|^2 - \frac{1}{2\sigma}\|X\|^2$$
-
-**Proximal operator:**
-
-$$\mathbf{P}_{\frac{1}{\sigma}f}(v) = \arg\min_{y} \left\{ \frac{1}{\sigma} f(y) + \frac{1}{2}\|y - v\|^2 \right\}$$
-
-## 4. ADMM for Robust PCA
-
-**Problem:** $\min_{L,S}\; \|L\|_* + \lambda\|S\|_1 \;\text{ s.t. }\; L + S = X \quad \Rightarrow \quad A = I,\; B = I,\; c = X$
-
-**Augmented Lagrangian:**
-
-$$\mathcal{L}_\sigma(L, S, Z) = \|L\|_* + \lambda\|S\|_1 + \frac{\sigma}{2}\left\|L + S - X + \sigma^{-1}Z\right\|_F^2 - \frac{1}{2\sigma}\|Z\|_F^2$$
-
-**Subproblem-$L$** (singular value soft-thresholding):
-
-1. Compute SVD: $\;T^{(k)} = X - S^{(k)} - \sigma^{-1}Z^{(k)} = U^{(k)}\,\text{Diag}(d^{(k)})\,(V^{(k)})^T$
-2. Soft-threshold singular values: $\;\gamma^{(k)} = \mathcal{S}_{1/\sigma}(d^{(k)})$
-3. Update: $\;L^{(k+1)} = U^{(k)}\,\text{Diag}(\gamma^{(k)})\,(V^{(k)})^T$
-
-**Subproblem-$S$** (element-wise soft-thresholding):
-
-$$S^{(k+1)} = \mathcal{S}_{\lambda/\sigma}\!\left(X - L^{(k+1)} - \sigma^{-1}Z^{(k)}\right)$$
-
-**Multiplier update:**
-
-$$Z^{(k+1)} = Z^{(k)} + \tau\sigma\!\left(L^{(k+1)} + S^{(k+1)} - X\right)$$
-
-## 5. ADMM for Lasso
-
-**Lasso:** $\;\min_{\beta \in \mathbb{R}^p}\; \dfrac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|_1, \quad X \in \mathbb{R}^{n \times p},\; Y \in \mathbb{R}^n$
-
-### Primal ADMM — use when $p < n$
-
-Introduce slack $u = \beta$:
-
-$$\min_{\beta,\,u} \; \frac{1}{2}\|X\beta - Y\|^2 + \lambda\|u\|_1 \quad \text{s.t.} \quad \beta - u = 0$$
-
-**Iterations:**
-
-$$\beta^{(k+1)} = \left(\sigma I + X^T X\right)^{-1}\!\left(X^T Y + \sigma u^{(k)} - \xi^{(k)}\right) \quad [p \times p \text{ linear system}]$$
-
-$$u^{(k+1)} = \mathcal{S}_{\lambda/\sigma}\!\left(\beta^{(k+1)} + \sigma^{-1}\xi^{(k)}\right)$$
-
-$$\xi^{(k+1)} = \xi^{(k)} + \tau\sigma\!\left(\beta^{(k+1)} - u^{(k+1)}\right)$$
-
-### Dual ADMM — use when $n < p$
-
-Dual problem:
-
-$$\min_{y,\,v} \; \frac{1}{2}\|y\|^2 - \langle y, Y\rangle + \delta_{B_\lambda}(v) \quad \text{s.t.} \quad X^T y + v = 0$$
-
-**Iterations:**
-
-$$y^{(k+1)} = \left(I + \sigma X X^T\right)^{-1}\!\left(Y - X\!\left(\beta^{(k)} + \sigma v^{(k)}\right)\right) \quad [n \times n \text{ linear system}]$$
-
-$$v^{(k+1)} = \Pi_{B_\lambda}\!\left(-X^T y^{(k+1)} - \sigma^{-1}\beta^{(k)}\right)$$
-
-$$\beta^{(k+1)} = \beta^{(k)} + \tau\sigma\!\left(X^T y^{(k+1)} + v^{(k+1)}\right)$$
-
-where $B_\lambda = \{v \mid \|v\|_\infty \leq \lambda\}$ and $\Pi_{B_\lambda}(s)_i = \text{clamp}(s_i,\,-\lambda,\,\lambda)$.
-
-## 6. Key Operators
-
-| Operator | Formula | Used in |
-|----------|---------|---------|
-| **Soft-thresholding** $\mathcal{S}_\tau(x)_i$ | $\text{sign}(x_i)\cdot\max(\|x_i\| - \tau,\; 0)$ | $\ell_1$ proximal |
-| **SVD soft-threshold** | Apply $\mathcal{S}_{1/\sigma}$ to singular values | Nuclear norm proximal |
-| **Projection onto $B_\lambda$** | Clamp each entry to $[-\lambda,\, \lambda]$ | Dual Lasso |
-| **Projection onto set $C$** | $\Pi_C(v) = \arg\min_{z \in C}\|z - v\|$ | Constrained problems |
-
-## 7. Practical Notes
-
-- **$\sigma$ too large** $\Rightarrow$ insufficient minimization of $f + g$
-- **$\sigma$ too small** $\Rightarrow$ insufficient feasibility enforcement
-- Common step lengths: $\tau = 1$ or $\tau = 1.618 \approx \frac{1+\sqrt{5}}{2}$
-- Pre-compute and cache $(\sigma I + X^T X)^{-1}$ or $(I + \sigma X X^T)^{-1}$ before iterating
-- Choose **primal vs. dual ADMM** based on problem dimension:
-  - $p < n \;\Rightarrow\;$ primal ADMM ($p \times p$ system)
-  - $n < p \;\Rightarrow\;$ dual ADMM ($n \times n$ system)
-
----
-
-# Lecture 10: Gaussian Graphical Models
-
-## 1. Conditional Independence
-
-**Definition:** $X \perp\!\!\!\perp Y \mid Z$ if $p(x, y \mid z) = p(x \mid z)\,p(y \mid z)$
-
-**Factorization:** If $X \perp\!\!\!\perp Y \mid Z$, then $p(x,y,z) = g(x,z)\,h(y,z)$
-
-## 2. Undirected Graph
-
-- Graph $G = (V, E)$, vertex set $V = \{1,\ldots,p\}$, edge set $E \subset V \times V$
-- Undirected: $(s,t) \in E \iff (t,s) \in E$; no self-loops
-
-**Markov Property:** $x$ is Markov w.r.t. $G$ if for every cut set $S$ separating $A$ and $B$:
-$$x_A \perp\!\!\!\perp x_B \mid x_S$$
-
-## 3. Multivariate Gaussian
-
-$$f(x) = (2\pi)^{-p/2}\det(\Theta)^{1/2} \exp\!\left(-\tfrac{1}{2}x^T\Theta x\right), \quad x \sim \mathcal{N}(0,\Sigma)$$
-
-- **Precision matrix:** $\Theta = \Sigma^{-1} \in \mathbb{S}^p_{++}$
-- $\det(\Sigma) = \prod_j \lambda_j(\Sigma)$, $\quad \det(\Theta) = 1/\det(\Sigma)$
-
-## 4. Gaussian Graphical Model (GGM)
-
-**Key fact:** For $x \sim \mathcal{N}(0,\Sigma)$:
-$$x_s \perp\!\!\!\perp x_t \mid x_{V\setminus\{s,t\}} \iff \Theta_{st} = 0$$
-
-**Edge set:** $E = \{(s,t) \mid \Theta_{st} \neq 0,\ s < t\}$
-
-> Zero off-diagonal entry in $\Theta$ $\longleftrightarrow$ no edge $\longleftrightarrow$ conditional independence
-
-**Steps to draw the graph:**
-1. Compute $\Theta = \Sigma^{-1}$
-2. Find all $(s,t)$ with $\Theta_{st} \neq 0$, $s < t$ → these are the edges
-3. Plot
-
-## 5. Maximum Likelihood Estimation (MLE)
-
-Given $n$ i.i.d. samples, the **sample covariance matrix** is:
-$$S = \frac{1}{n}\sum_{i=1}^n x^{(i)}(x^{(i)})^T$$
-
-**MLE problem:**
-$$\min_{\Theta \in \mathbb{S}^p_{++}} -\log\det(\Theta) + \langle S, \Theta \rangle$$
-
-- MLE solution (when it exists): $\widehat{\Theta} = S^{-1}$
-- Solution **fails** when $n < p$ (S is rank-deficient)
-
-**Log-det function:** $h(\Theta) = -\log\det(\Theta)$
-- Convex on $\mathbb{S}^p_{++}$
-- Gradient: $\nabla h(\Theta) = -\Theta^{-1}$
-
-## 6. Graphical Lasso
-
-Adds $\ell_1$ penalty on off-diagonal entries to encourage sparsity:
-
-$$\min_{\Theta \in \mathbb{S}^p_{++}} -\log\det(\Theta) + \langle S,\Theta\rangle + \lambda\|\Theta\|_{1,\text{off}}$$
-
-where $\|\Theta\|_{1,\text{off}} = \sum_{s \neq t} |\Theta_{st}|$
-
-## 7. ADMM for Graphical Lasso
-
-Reformulate with splitting variable $Y$, Lagrange multiplier $Z$:
-
-| Step | Update |
-|---|---|
-| **Θ-update** | $T = Y - \sigma^{-1}(S+Z)$; eigen-decomp $T = Q\,\text{Diag}(\rho)\,Q^T$; then $\gamma_j = \frac{1}{2}\!\left(\rho_j + \sqrt{\rho_j^2 + 4/\sigma}\right)$; $\Theta \leftarrow Q\,\text{Diag}(\gamma)\,Q^T$ |
-| **Y-update** | $Y \leftarrow S^\text{off}_{\lambda/\sigma}(\Theta + \sigma^{-1}Z)$ — soft-threshold **off-diagonal** only |
-| **Z-update** | $Z \leftarrow Z + \tau\sigma(\Theta - Y)$, with $0 < \tau < \frac{1+\sqrt{5}}{2}$ |
-
-**Soft-threshold operator:** $S_\alpha(x) = \text{sign}(x)\max(|x|-\alpha, 0)$
-
-**Proximal map of log-det:**
-$$P_{\frac{1}{\sigma}h}(Y) = Q\,\text{Diag}(\gamma)\,Q^T, \quad \gamma_j = \frac{1}{2}\!\left(\rho_j + \sqrt{\rho_j^2 + 4/\sigma}\right)$$
-
-## 8. Neighbourhood Selection
-
-**Idea:** Regress each variable on all others using Lasso.
-
-For vertex $j$, solve:
-$$\beta^j = \arg\min_{\beta \in \mathbb{R}^{p-1}} \frac{1}{2}\|X_{\cdot,-j}\beta - X_{\cdot j}\|^2 + \lambda\|\beta\|_1$$
-
-Neighbourhood: $\mathcal{N}(j) = \{t \mid \beta^j_t \neq 0\}$
-
-**Graph construction:**
-- **AND rule:** edge $(s,t)$ iff $s \in \mathcal{N}(t)$ **and** $t \in \mathcal{N}(s)$
-- **OR rule:** edge $(s,t)$ iff $s \in \mathcal{N}(t)$ **or** $t \in \mathcal{N}(s)$
-
-## 9. Quick Reference
+### Notation
 
 | Symbol | Meaning |
+|--------|---------|
+| $\mathbf{x} \in \mathbb{R}^d$ | Column vector, $d$-dim |
+| $A \in \mathbb{R}^{m \times n}$ | Matrix, $m$ rows, $n$ cols |
+| $A^T$ | Transpose |
+| $A^{-1}$ | Inverse (square, full-rank only) |
+| $\|{\mathbf{x}}\|_2$ | L2 norm $= \sqrt{\sum_i x_i^2}$ |
+| $\|{\mathbf{x}}\|_1$ | L1 norm $= \sum_i |x_i|$ |
+
+### Key Identities
+
+$$\mathbf{x}^T\mathbf{y} = \mathbf{y}^T\mathbf{x} \quad \text{(dot product, scalar)}$$
+$$(AB)^T = B^T A^T$$
+$$(AB)^{-1} = B^{-1}A^{-1}$$
+$$(A^T)^{-1} = (A^{-1})^T$$
+
+### Matrix Calculus (used in backprop)
+
+| Expression | Gradient w.r.t. $\mathbf{w}$ |
+|------------|-------------------------------|
+| $\mathbf{w}^T\mathbf{x}$ | $\mathbf{x}$ |
+| $\mathbf{x}^T A \mathbf{x}$ | $(A + A^T)\mathbf{x}$ |
+| $\|\mathbf{x} - A\mathbf{w}\|^2$ | $-2A^T(\mathbf{x} - A\mathbf{w})$ |
+| $\frac{1}{2}\|X\mathbf{w} - \mathbf{y}\|^2$ | $X^T(X\mathbf{w} - \mathbf{y})$ |
+
+### OLS & Ridge Solutions
+
+$$\hat{\mathbf{w}}_{\text{OLS}} = (X^TX)^{-1}X^T\mathbf{y}$$
+$$\hat{\mathbf{w}}_{\text{Ridge}} = (X^TX + \alpha I)^{-1}X^T\mathbf{y}$$
+
+### Eigendecomposition
+
+For symmetric $A = U\Lambda U^T$:
+- $U$ — orthogonal matrix of eigenvectors
+- $\Lambda = \text{diag}(\lambda_1, \ldots, \lambda_d)$ — eigenvalues
+
+$$A\mathbf{u}_i = \lambda_i \mathbf{u}_i, \qquad U^TU = I$$
+
+**Condition number:** $\kappa(A) = \dfrac{\lambda_{\max}}{\lambda_{\min}}$ — large $\kappa$ → slow GD convergence.
+
+### Norms Summary
+
+| Norm | Formula | Use in DL |
+|------|---------|-----------|
+| L1 | $\|\mathbf{w}\|_1 = \sum_i \vert w_i \vert$ | LASSO, sparsity |
+| L2 | $\|\mathbf{w}\|_2 = \sqrt{\sum_i w_i^2}$ | Ridge, weight decay |
+| Frobenius | $\|A\|_F = \sqrt{\sum_{i,j} A_{ij}^2}$ | Matrix regularization |
+
+## 4. Probability & Statistics Essentials
+
+### Expectation & Variance
+
+$$\mathbb{E}[X] = \sum_x x\,p(x) \quad \text{(discrete)}, \qquad \mathbb{E}[X] = \int x\,p(x)\,dx \quad \text{(continuous)}$$
+$$\text{Var}(X) = \mathbb{E}[X^2] - (\mathbb{E}[X])^2$$
+$$\text{Var}(aX + b) = a^2\,\text{Var}(X)$$
+
+### Key Distributions
+
+| Distribution | PDF/PMF | Mean | Variance |
+|---|---|---|---|
+| Gaussian $\mathcal{N}(\mu, \sigma^2)$ | $\frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}$ | $\mu$ | $\sigma^2$ |
+| Bernoulli$(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ |
+
+### Bayes' Theorem
+$$p(\boldsymbol{\theta} \mid \mathbf{x}) = \frac{p(\mathbf{x} \mid \boldsymbol{\theta})\,p(\boldsymbol{\theta})}{p(\mathbf{x})}$$
+
+| Term | Name |
+|------|------|
+| $p(\boldsymbol{\theta} \mid \mathbf{x})$ | Posterior |
+| $p(\mathbf{x} \mid \boldsymbol{\theta})$ | Likelihood |
+| $p(\boldsymbol{\theta})$ | Prior |
+| $p(\mathbf{x})$ | Evidence (normalizer) |
+
+### KL Divergence
+$$D_{KL}(p \| q) = \mathbb{E}_{p}\!\left[\log\frac{p(x)}{q(x)}\right] \geq 0, \quad = 0 \iff p = q$$
+
+> Not symmetric: $D_{KL}(p\|q) \neq D_{KL}(q\|p)$
+
+## 5. Useful Miscellaneous Identities
+
+### Taylor Expansion (1st order)
+$$f(\mathbf{x} + \epsilon\boldsymbol{\phi}) \approx f(\mathbf{x}) + \epsilon\,\boldsymbol{\phi}^T\nabla f(\mathbf{x})$$
+Used to derive gradient descent: choose $\boldsymbol{\phi} = -\nabla f$ to decrease $f$.
+
+### Sigmoid Identities
+$$\sigma(-z) = 1 - \sigma(z), \qquad \log \sigma(z) = -\log(1 + e^{-z})$$
+
+### Log-Likelihood & Cross-Entropy Connection
+$$-\log p(y|\mathbf{x}) = \text{cross-entropy}(y, \hat{y})$$
+Minimising cross-entropy ≡ maximising log-likelihood.
+
+### Dot Product & Cosine Similarity
+$$\mathbf{a}^T\mathbf{b} = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta, \qquad \cos\theta = \frac{\mathbf{a}^T\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}$$
+Used in attention: $e_{ij} = q_i^T k_j$ is proportional to cosine similarity when vectors are normalized.
+
+### Frobenius Inner Product
+$$\langle A, B \rangle_F = \text{tr}(A^T B) = \sum_{i,j} A_{ij}B_{ij}$$
+
+### Trace Tricks
+$$\text{tr}(AB) = \text{tr}(BA), \qquad \mathbf{x}^T A \mathbf{x} = \text{tr}(A\mathbf{x}\mathbf{x}^T)$$
+
+## 6. Confusion Matrix & Classification Metrics
+ 
+### The Confusion Matrix (Binary Classification)
+ 
+|  | Predicted Positive | Predicted Negative |
+|--|---|---|
+| **Actual Positive** | TP (True Positive) | FN (False Negative) |
+| **Actual Negative** | FP (False Positive) | TN (True Negative) |
+ 
+- **TP** — correctly predicted positive
+- **TN** — correctly predicted negative
+- **FP** — predicted positive, actually negative (Type I error)
+- **FN** — predicted negative, actually positive (Type II error)
+### Metrics
+ 
+$$\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}$$
+ 
+> Fraction of all predictions that were correct. **Misleading on imbalanced datasets** — a model predicting all negatives on a 99:1 dataset gets 99% accuracy while being useless.
+ 
+$$\text{Precision} = \frac{TP}{TP + FP}$$
+ 
+> Of all the times the model said "positive", how often was it right? High precision = **few false alarms**. Optimise this when false positives are costly (e.g. spam filter wrongly blocking legitimate email).
+ 
+$$\text{Recall} = \frac{TP}{TP + FN}$$
+ 
+> Of all actual positives, how many did the model catch? High recall = **few missed positives**. Optimise this when false negatives are costly (e.g. missing a cancer diagnosis).
+ 
+$$\text{F1} = 2 \cdot \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2TP}{2TP + FP + FN}$$
+ 
+> Harmonic mean of precision and recall — balances both. Preferred over accuracy on **imbalanced datasets**. The harmonic mean punishes extreme imbalance between the two: a model with precision 1.0 and recall 0.01 gets F1 = 0.02, not 0.5.
+ 
+### Precision–Recall Tradeoff
+ 
+Precision and recall are in **tension** — controlled by the classification threshold $\tau$:
+ 
+| Threshold $\tau$ | Effect |
 |---|---|
-| $\Sigma$ | Covariance matrix |
-| $\Theta = \Sigma^{-1}$ | Precision (inverse covariance) matrix |
-| $S$ | Sample covariance matrix |
-| $\lambda$ | Regularisation parameter |
-| $\sigma$ | ADMM step size |
-| $\mathbb{S}^p_{++}$ | Set of $p\times p$ positive definite matrices |
+| $\tau$ high (strict) | Fewer positives predicted → Precision ↑, Recall ↓ |
+| $\tau$ low (lenient) | More positives predicted → Recall ↑, Precision ↓ |
+ 
+> **Intuition:** A spam filter set to block aggressively (low $\tau$) catches more spam (high recall) but also blocks more legitimate email (low precision). Loosening it does the opposite.
+ 
+The **PR curve** plots Precision vs Recall across all thresholds. A model with a larger **area under the PR curve (AUC-PR)** is better, especially under class imbalance. A random classifier's AUC-PR equals the fraction of positives in the dataset.
+  
+## 7. Bias–Variance Tradeoff
+ 
+### Decomposition
+ 
+For a model $\hat{f}$ trained on dataset $\mathcal{D}$, the expected test error decomposes as:
+ 
+$$\mathbb{E}\left[(y - \hat{f}(\mathbf{x}))^2\right] = \underbrace{\text{Bias}^2(\hat{f})}_{\text{underfitting}} + \underbrace{\text{Var}(\hat{f})}_{\text{overfitting}} + \underbrace{\sigma^2}_{\text{irreducible noise}}$$
+ 
+| Term | Formula | Meaning |
+|------|---------|---------|
+| **Bias** | $\mathbb{E}[\hat{f}(\mathbf{x})] - f^*(\mathbf{x})$ | How far the average prediction is from the truth — error from wrong assumptions |
+| **Variance** | $\mathbb{E}\left[(\hat{f}(\mathbf{x}) - \mathbb{E}[\hat{f}(\mathbf{x})])^2\right]$ | How much the model fluctuates across different training sets |
+| **Noise** | $\sigma^2 = \text{Var}(y \mid \mathbf{x})$ | Irreducible — inherent randomness in the data |
+ 
+### Intuition
+ 
+| Scenario | Bias | Variance | Symptom |
+|---|---|---|---|
+| **Underfitting** | High | Low | Model too simple; misses true pattern |
+| **Overfitting** | Low | High | Model too complex; memorises noise |
+| **Good fit** | Low | Low | Generalises well |
+ 
+> **Analogy:** Bias is a consistently off-centre archer (wrong aim). Variance is a scattered archer (inconsistent). You want both centred and tight grouping.
+ 
+### Connection to Regularization & Model Capacity
+ 
+- Increasing model capacity (more layers, more neurons) → **bias ↓, variance ↑**
+- Adding regularization ($L^1$, $L^2$, dropout, early stopping) → **variance ↓, bias ↑ slightly**
+- Adding more data → **variance ↓**, bias unchanged
+> Regularization methods from Lecture 6 are all mechanisms to shift the bias–variance tradeoff toward lower variance at the cost of a small increase in bias.
 
 ---
 
-# Lecture 11: Second Order Methods
+# DSA5106 — Lecture 1
 
-## 1. Rates of Convergence
+## 1. The T, E, P Framework (Tom Mitchell)
 
-| Type | Condition | Example |
-|------|-----------|---------|
-| **Q-linear** | $\frac{\|x^{(k+1)}-x^*\|}{\|x^{(k)}-x^*\|} \leq r \in (0,1)$ | $1 + 0.8^k$ |
-| **Q-superlinear** | $\lim_{k\to\infty}\frac{\|x^{(k+1)}-x^*\|}{\|x^{(k)}-x^*\|} = 0$ | $1 + k^{-k}$ |
-| **Q-quadratic** | $\frac{\|x^{(k+1)}-x^*\|}{\|x^{(k)}-x^*\|^2} \leq M$ for some $M>0$ | $1 + (0.8)^{2^k}$ |
+> *A program learns from **Experience E** w.r.t. **Task T** measured by **Performance P** if P improves with E.*
 
-**Hierarchy:** Q-quadratic > Q-superlinear > Q-linear (eventually faster)
-
-**Key facts:**
-- Q-quadratic ⟹ Q-superlinear ⟹ Q-linear
-- $1/k$ is **not** Q-linearly convergent; $1/k!$ is Q-superlinear but **not** Q-quadratic
-
-## 2. General Framework
-
-For $\min_x f(x)$, differentiable:
-$$x^{(k+1)} = x^{(k)} - \alpha_k P_k \nabla f(x^{(k)})$$
-
-| $P_k$ | Method |
-|-------|--------|
-| $I$ | Gradient (steepest) descent |
-| $[H_f(x^{(k)})]^{-1}$ | Pure Newton's method |
-| $[H_f(x^{(k)}) + \tau_k I]^{-1}$ | Modified Newton |
-| $H_k \approx [H_f(x^{(k)})]^{-1}$ | Quasi-Newton (BFGS) |
-
-## 3. Pure Newton's Method
-
-**Derivation:** Minimize 2nd-order Taylor approximation of $f$.
-
-**Newton direction:**
-$$p^{(k)} = -[H_f(x^{(k)})]^{-1} \nabla f(x^{(k)})$$
-equivalently, solve the **linear system**:
-$$H_f(x^{(k)})\, p = -\nabla f(x^{(k)})$$
-
-**Update:** $x^{(k+1)} = x^{(k)} + p^{(k)}$ (step size = 1)
-
-**Descent direction condition:** $p^{(k)}$ is a descent direction iff $H_f(x^{(k)}) \succ 0$:
-$$\nabla f(x^{(k)})^T p^{(k)} = -(p^{(k)})^T H_f(x^{(k)}) p^{(k)} < 0$$
-
-**Convergence:** Q-quadratic (locally, near $x^*$), given:
-1. $f$ twice differentiable
-2. $H_f(\cdot)$ locally Lipschitz at $x^*$: $\|H_f(x^*) - H_f(x)\| \leq L\|x^*-x\|$
-3. Sufficient conditions (SOSC) at $x^*$
-
-**Limitations:** May diverge from remote starting points; requires Hessian ($O(n^3)$ to solve).
-
-## 4. Practical Newton's Method
-
-### 4a. Line Search Newton with Modification
-
-$$x^{(k+1)} = x^{(k)} + \alpha_k p^{(k)}, \quad p^{(k)} = -[H_f(x^{(k)}) + \tau_k I]^{-1}\nabla f(x^{(k)})$$
-
-**Hessian modification:** If $H_f(x^{(k)}) \not\succ 0$, choose $\tau_k > -\lambda_{\min}(H_f(x^{(k)}))$ so $B_k = H_f(x^{(k)}) + \tau_k I \succ 0$.
-
-- If $\tau_k$ too large: $p^{(k)} \approx -\tau_k^{-1}\nabla f(x^{(k)})$ (degenerates to slow gradient descent)
-
-**Line search (Armijo backtracking):**
-$$f(x^{(k)} + \alpha p^{(k)}) \leq f(x^{(k)}) + c_1 \alpha \nabla f(x^{(k)})^T p^{(k)}$$
-Start with $\alpha=1$, reduce by $\alpha \leftarrow \rho\alpha$ until satisfied.
-
-**Convergence rate:**
-- If $H_f(x^*) \succ 0$: $\tau_k \to 0$, reduces to pure Newton → **Q-quadratic**
-- Otherwise: may be only **linear**
-
-### 4b. BFGS (Quasi-Newton)
-
-Approximates $H_k \approx [H_f(x^{(k)})]^{-1}$ without computing the true Hessian.
-
-**Secant equation** (the key constraint on $B_{k+1} \approx H_f$):
-$$B_{k+1} s_k = y_k$$
-where $s_k = x^{(k+1)} - x^{(k)}$, $\quad y_k = \nabla f(x^{(k+1)}) - \nabla f(x^{(k)})$
-
-**Curvature condition** (required for $B_{k+1} \succ 0$): $y_k^T s_k > 0$
-
-**BFGS update formula** (updates inverse Hessian approximation $H_k$):
-$$H_{k+1} = (I - \rho_k s_k y_k^T) H_k (I - \rho_k y_k s_k^T) + \rho_k s_k s_k^T, \quad \rho_k = \frac{1}{y_k^T s_k}$$
-
-**Equivalent $B_k$ update (rank-2):**
-$$B_{k+1} = B_k - \frac{B_k s_k s_k^T B_k}{s_k^T B_k s_k} + \frac{y_k y_k^T}{y_k^T s_k}$$
-
-**Per-iteration cost:** $O(n^2)$. **Convergence:** Q-superlinear.
-
-## 5. Trust-Region Method
-
-**Model function:**
-$$m_k(p) = f(x^{(k)}) + \nabla f(x^{(k)})^T p + \frac{1}{2} p^T B_k p$$
-
-**Subproblem:** $\min_p\ m_k(p) \quad \text{s.t.} \quad \|p\| \leq \Delta_k$
-
-**Ratio for adapting radius:**
-$$\rho_k = \frac{f(x^{(k)}) - f(x^{(k)}+p^{(k)})}{m_k(0) - m_k(p^{(k)})} = \frac{\text{actual reduction}}{\text{predicted reduction}}$$
-
-| $\rho_k$ | Action |
-|----------|--------|
-| $< 1/4$ | Shrink: $\Delta_{k+1} = \frac{1}{4}\Delta_k$, reject step |
-| $> 3/4$ and $\|p^{(k)}\| = \Delta_k$ | Expand: $\Delta_{k+1} = \min(2\Delta_k, \hat\Delta)$ |
-| otherwise | Keep: $\Delta_{k+1} = \Delta_k$ |
-| $> \eta$ | Accept step: $x^{(k+1)} = x^{(k)} + p^{(k)}$ |
-
-**Full step** (when $B_k \succ 0$ and $\|B_k^{-1}\nabla f(x^{(k)})\| \leq \Delta_k$):
-$$p^{(k)} = -B_k^{-1}\nabla f(x^{(k)})$$
-
-## 6. Proximal Newton (Non-smooth $g$)
-
-For $\min_x f(x) + g(x)$ ($f$ smooth, $g$ non-smooth):
-$$x^{(k+1)} = \arg\min_x \left\{ \nabla f(x^{(k)})^T(x-x^{(k)}) + \frac{1}{2}(x-x^{(k)})^T B_k (x-x^{(k)}) + g(x) \right\}$$
-
----
-
-## Quick Reference: Convergence Rates
-
-| Method | Rate |
-|--------|------|
-| Gradient descent | Q-linear |
-| Newton's (pure, local) | Q-quadratic |
-| Newton's (modified + line search, at $x^*$ with $H\succ0$) | Q-quadratic |
-| Newton's (at $x^*$ with $H\not\succ0$) | Q-linear |
-| BFGS | Q-superlinear |
-| Trust-region Newton (at SOSC point) | Q-superlinear |
-
----
-
-# Lecture 12: Clustering
-
-## 1. Core Idea
-
-| | Supervised | Unsupervised |
+| Component | Meaning | Example |
 |---|---|---|
-| Labels | Given (Y) | None |
-| Goal | Predict labels | Find hidden patterns |
-| Examples | SVM, linear regression | K-means, hierarchical |
+| **T** (Task) | What to do | Predict house prices |
+| **E** (Experience) | Training data $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^N$ | Labelled dataset |
+| **P** (Performance) | Metric | MSE, Accuracy |
 
-**Clustering** groups data so that:
-- **Intra-cluster distance** is **small** (similar points together)
-- **Inter-cluster distance** is **large** (different groups far apart)
+## 2. Empirical Risk Minimization (ERM)
 
-## 2. Distance Between Two Objects
+**Distance / Loss** over dataset:
+$$\text{Distance} = \frac{1}{N}\sum_{i=1}^{N} L(f(\mathbf{x}_i),\, y_i)$$
 
-$$D(a, b) = \|a - b\|_2 = \sqrt{\sum_{i=1}^{p}(a_i - b_i)^2}$$
+This is called the **empirical risk** $R_\text{emp}(f, \mathcal{D})$.
 
-Other options: $\|a-b\|_1$, $\|a-b\|_\infty$, cosine similarity.
+**ERM:**
+$$\hat{f} = \arg\min_{f \in \mathcal{H}}\; R_\text{emp}(f, \mathcal{D})$$
 
-## 3. Distance Between Two Clusters
+**Goal (population risk):**
+$$\tilde{f} = \arg\min_{f \in \mathcal{H}}\; R_\text{pop}(f) = \mathbb{E}_{\mathbf{x}\sim\mu}\bigl[L(f(\mathbf{x}), f^*(\mathbf{x}))\bigr]$$
 
-| Linkage | Formula | Description |
-|---|---|---|
-| **Single** | $\min_{a \in C_1, b \in C_2} D(a,b)$ | Shortest pairwise distance |
-| **Complete** | $\max_{a \in C_1, b \in C_2} D(a,b)$ | Longest pairwise distance |
-| **Average** ⭐ | $\dfrac{1}{\|C_1\|\|C_2\|} \sum_{a \in C_1, b \in C_2} D(a,b)$ | Average of all pairwise distances |
+> ⚠️ ERM $\neq$ population risk minimization — the gap is the **generalization gap**.
 
-> ⭐ Average linkage is the most widely used.
+## 3. Linear Regression
 
-## 4. Hierarchical Clustering (Bottom-Up / Agglomerative)
+**Hypothesis space (affine):**
+$$\mathcal{H} = \{f(\mathbf{x}) = \mathbf{w}^T\mathbf{x} + b : \mathbf{w} \in \mathbb{R}^d,\, b \in \mathbb{R}\}$$
 
-**Algorithm:**
-1. Start: each object is its own cluster → $n$ clusters
-2. Find the pair of clusters with **smallest** $L(C_i, C_j)$
-3. Merge them into one cluster
-4. Repeat until 1 cluster remains
+**Square loss:**
+$$L(y', y) = \tfrac{1}{2}(y' - y)^2$$
 
-**Output:** A **dendrogram** (tree diagram)
+**ERM (matrix form):**
+$$\min_{\mathbf{w}}\; R_\text{emp}(\mathbf{w}) = \min_{\mathbf{w}}\; \frac{1}{2N}\|X\mathbf{w} - \mathbf{y}\|^2$$
 
-```
-Height
-  |       ┌──────────────┐
-8 |       │              │
-  |   ┌───┘          ┌───┘
-5 |   │              │
-  | ┌─┘  ┌─┐       ┌─┘  ┌─┐
-2 | │    │ │       │    │ │
-  | C    G  A  D   B    E  F
-```
-- **Low fusion height** → very similar objects
-- **High fusion height** → dissimilar objects
-- **Horizontal position** along the x-axis means **nothing** about similarity
+**Ordinary Least Squares (OLS) solution:**
+$$\hat{\mathbf{w}} = (X^T X)^{-1} X^T \mathbf{y}$$
 
-### Reading the Dendrogram
+*For affine models, append a column of 1s to $X$ and append $b$ to $\mathbf{w}$.*
 
-| Q | How to answer |
+## 4. Linear Basis (Feature) Models
+
+When linear functions are insufficient, use **basis functions** $\boldsymbol{\phi} = (\phi_1,\ldots,\phi_m)$:
+
+$$\mathcal{H} = \left\{f(\mathbf{x}) = \mathbf{w}^T\boldsymbol{\phi}(\mathbf{x}) = \sum_{i=1}^m w_i \phi_i(\mathbf{x}) : \mathbf{w} \in \mathbb{R}^m\right\}$$
+
+| Basis | Formula |
 |---|---|
-| Are X and Y similar? | Check how low they fuse — lower = more similar |
-| How different are two clusters? | Read the **height** on the vertical axis |
-| Is A more similar to B than to C? | **Cannot** determine from dendrogram alone |
+| Polynomial | $\phi_j(x) = x^j$ |
+| Gaussian | $\phi_j(x) = \exp\!\left(-\frac{(x-m_j)^2}{2s^2}\right)$ |
+| Sigmoid | $\phi_j(x) = \sigma\!\left(\frac{x-m_j}{s}\right),\quad \sigma(b)=\frac{1}{1+e^{-b}}$ |
 
-### Identifying Clusters: Horizontal Cut
+**Solution:** Replace $X$ with feature matrix $\Phi$ (rows = $\boldsymbol{\phi}(\mathbf{x}_i)$):
+$$\hat{\mathbf{w}} = (\Phi^T\Phi)^{-1}\Phi^T\mathbf{y}$$
 
-Make a horizontal cut at height $y = a$:
-- Number of vertical lines crossed = **number of clusters**
+**Universality:** With $m\to\infty$ and appropriate bases, linear basis models can approximate *any* function (Fourier series, Weierstrass approximation).
 
-**Choosing the best cut:** pick the cut with the **largest vertical range** (most room to move up/down without hitting a horizontal branch).
+## 5. Model Capacity, Underfitting & Overfitting
 
-```
-Cut at y=6  →  3 clusters: {C,G,A,D}, {B}, {E,F}   (range 1.91) ✓
-Cut at y=3.4 →  5 clusters: {C,G}, {A,D}, {B}, {E}, {F}  (range 0.44)
-```
-
-## 5. K-Means Clustering
-
-**Objective:** minimise total intra-cluster distance
-
-$$\min_{C_1,\ldots,C_K} \sum_{k=1}^{K} \frac{1}{|C_k|} \sum_{i,j \in C_k} \|x_i - x_j\|^2$$
-
-**Algorithm:**
-
-```
-Initialise: place K centroids μ₁, ..., μₖ at random
-
-Repeat until assignments don't change:
-  (1) Assign each xᵢ to nearest centroid:
-          argmin_k  D(xᵢ, μₖ)
-
-  (2) Recompute centroid of each cluster:
-          μₖ = (1/|Cₖ|) Σᵢ∈Cₖ xᵢ
-```
-
-### Choosing K (Elbow Method)
-
-Plot the objective function vs K. Look for the **"elbow"** — the point of most abrupt decrease.
-
-```
-Objective
-  |  *
-  |    *
-  |       *
-  |           * * * * *
-  +--1---2---3---4---5-- K
-              ↑
-           elbow → K=2 or K=3
-```
-
-## 6. Hierarchical vs K-Means Summary
-
-| | Hierarchical | K-Means |
+| Issue | Cause | Symptom |
 |---|---|---|
-| K specified? | No (cut dendrogram after) | Yes, upfront |
-| Output | Dendrogram | Flat cluster assignments |
-| Sensitive to init? | No | Yes — run multiple times |
-| Key choice | Linkage type + cut height | K, initialisation |
-| Overlapping clusters? | No | No |
+| **Underfitting** | $\mathcal{H}$ too small (low capacity) | High train & test error |
+| **Overfitting** | $\mathcal{H}$ too large (high capacity) | Low train, high test error |
 
-## 7. Common Pitfalls & Practical Notes
+**Remedy:** Train-test split $\mathcal{D} = \mathcal{D}_\text{train} \cup \mathcal{D}_\text{test}$
+- Train on $\mathcal{D}_\text{train}$, evaluate generalization on $\mathcal{D}_\text{test}$
+- **Never** let the learning algorithm peek at $\mathcal{D}_\text{test}$
 
-- **K-means:** results depend on random initialisation → run multiple times, pick lowest objective value
-- **Hierarchical:** choice of linkage affects results significantly
-- **Both:** no universally "correct" number of clusters — use elbow plot or dendrogram gap heuristic
-- **Horizontal position** in a dendrogram carries **no similarity information** — only height matters
+**Techniques to improve generalization:** architecture choice, regularization, data augmentation, optimization methods.
+
+## 6. Classification
+
+### Setup
+- Labels encoded as **one-hot vectors**: $\mathbf{y}_i = (0,\ldots,1,\ldots,0) \in \mathbb{R}^K$
+- Model outputs class probabilities: $f(\mathbf{x}_i) = (a_1,\ldots,a_K) \in \mathbb{R}^K$
+
+### Softmax activation
+$$s(\mathbf{z})_k = \frac{\exp(z_k)}{\sum_j \exp(z_j)}$$
+
+**Hypothesis space:**
+$$\mathcal{H} = \{f(\mathbf{x}) = s(W\boldsymbol{\phi}(\mathbf{x})) : W \in \mathbb{R}^{K\times m}\}$$
+
+### Loss functions for classification
+
+| Loss | Formula | Notes |
+|---|---|---|
+| **Zero-one** | $\mathbf{1}[\text{wrong}]$ | Not differentiable — can't use gradient descent |
+| **MSE** | $\frac{1}{2}\|\mathbf{y} - \mathbf{y}'\|^2$ | Bounded gradient; less effective |
+| **Cross-entropy** | $-\sum_{k=1}^K y_k' \log y_k$ | Preferred; large gradient when wrong |
+
+> Use **cross-entropy** with softmax for classification — gradients don't vanish the way MSE does.
+
+## 7. Key Concepts Summary
+
+| Concept | Description |
+|---|---|
+| Hypothesis space $\mathcal{H}$ | Set of candidate functions |
+| Capacity | Size / expressivity of $\mathcal{H}$ |
+| Empirical risk | Average loss on training data |
+| Population risk | Expected loss over the true distribution |
+| Generalization gap | $R_\text{pop}(\hat{f}) - R_\text{emp}(\hat{f})$ |
+| Basis functions / feature maps | Fixed nonlinear transforms of input |
+| Softmax | Converts logits to probability distribution |
+| Cross-entropy loss | Standard loss for classification |
+
+---
+
+# Lecture 2
+
+## 1. Motivation: Representation Learning
+
+### From Linear Basis to Adaptive Models
+
+| Model | Formula |
+|-------|---------|
+| Linear regression | $f(\mathbf{x}) = \mathbf{w}^T\mathbf{x}$ |
+| Linear basis model | $f(\mathbf{x}) = \mathbf{w}^T\boldsymbol{\phi}(\mathbf{x})$ |
+| Adaptive basis model | $f(\mathbf{x}) = \mathbf{w}^T\boldsymbol{\phi}(\mathbf{x}; \boldsymbol{\theta})$ |
+
+- Fixed basis $\boldsymbol{\phi}$ (polynomial, Fourier, Haar wavelet) works well for some $f^*$ but not all.
+- **Key insight**: Adapt $\boldsymbol{\phi}$ to data by learning $\boldsymbol{\theta}$ — this is **representation learning**.
+
+## 2. Why Not Just Use Large Linear Basis Models?
+
+### Curse of Dimensionality
+
+For a $d$-dimensional input, the number of polynomial basis functions grows **exponentially** with $d$.
+
+### Approximation Rates
+
+| Method | Error bound |
+|--------|------------|
+| Linear basis model (Jackson, 1912) | $\|f^* - f_m\|^2 \leq \mathcal{O}(m^{-2\alpha/d})$ |
+| Neural network (Barron, 1993) | $\|f^* - f_m\|^2 \leq \mathcal{O}(m^{-1})$ |
+
+where $m$ = number of neurons/basis functions, $\alpha$ = smoothness of $f^*$, $d$ = input dimension.
+
+**Neural networks beat the curse of dimensionality** — their approximation rate is *independent* of $d$.
+
+## 3. Neural Networks as Adaptive Basis Models
+
+### Shallow (1-hidden-layer) Network
+
+$$f(\mathbf{x}; W, \mathbf{c}, \mathbf{w}, b) = \mathbf{w}^T \underbrace{g(W\mathbf{x} + \mathbf{c})}_{\boldsymbol{\phi}(\mathbf{x};\boldsymbol{\theta})} + b$$
+
+**Parameters:**
+- $W \in \mathbb{R}^{m \times d}$ — input weight matrix
+- $\mathbf{c} \in \mathbb{R}^m$ — hidden bias
+- $\mathbf{w} \in \mathbb{R}^m$ — output weight
+- $b \in \mathbb{R}$ — output bias
+- $g$ — activation function (applied element-wise)
+
+**Composition:** $f = f^{(2)} \circ f^{(1)}$ where
+
+$$\mathbf{h} = f^{(1)}(\mathbf{x}; W, \mathbf{c}) = g(W\mathbf{x} + \mathbf{c}) \qquad \text{(hidden layer)}$$
+$$y = f^{(2)}(\mathbf{h}; \mathbf{w}, b) = \mathbf{w}^T\mathbf{h} + b \qquad \text{(output layer)}$$
+
+> **Why nonlinearity?** Composing linear layers collapses to a single linear model. Nonlinearity is essential.
+> Consider $f(x) = W_2(W_1x + b_1) + b_2$ 
+
+### XOR Example
+
+A simple 2-layer ReLU network with
+
+$$W = \begin{pmatrix}1&1\\1&1\end{pmatrix},\quad \mathbf{c} = \begin{pmatrix}0\\-1\end{pmatrix},\quad \mathbf{w} = \begin{pmatrix}1\\-2\end{pmatrix},\quad b=0$$
+
+perfectly represents the XOR function.
+
+## 4. Activation Functions
+
+| Name | Formula |
+|------|---------|
+| **ReLU** | $g(z) = \max(0, z)$ |
+| **Sigmoid** | $g(z) = \dfrac{1}{1+e^{-z}}$ |
+| **Tanh** | $g(z) = \tanh(z)$ |
+| **Leaky ReLU** | $g(z) = z$ if $z \geq 0$, else $\delta z$ |
+
+Each neuron computes: $g(W_i \cdot \mathbf{x} + c_i)$
+
+## 5. Universal Approximation Theorem
+
+> Any continuous function $f^*$ on a compact domain can be approximated to arbitrary precision by a neural network, provided $m$ (number of neurons) is large enough.
+
+## 6. Output Units & Loss Functions
+
+### Regression
+- **Output**: linear $\hat{y} = \mathbf{w}^T\mathbf{h} + b$
+- **Loss**: Mean squared error (MSE) $L(y, y') = \tfrac{1}{2}(y - y')^2$
+
+### Multi-class Classification
+- **Output**: $\text{Softmax}(\mathbf{z})_i = \dfrac{\exp(z_i)}{\sum_j \exp(z_j)}$
+- **Loss**: Cross-entropy $L(\mathbf{y}, \mathbf{y}') = -\sum_j y_j' \log y_j$
+
+### Multi-label Classification
+- **Output**: $\text{Sigmoid}(\mathbf{z})_i = \dfrac{1}{1+\exp(-z_i)}$
+- **Loss**: Binary cross-entropy $L(\mathbf{y}, \mathbf{y}') = -\sum_j \left[y_j' \log y_j + (1-y_j')\log(1-y_j)\right]$
+
+### Zero-One Loss (not used for optimization)
+$$L(y, y') = \mathbb{1}_{y \neq y'} \quad \text{(non-differentiable)}$$
+
+> **Cross-entropy vs MSE for classification**: Cross-entropy has better statistical interpretation (= log-likelihood maximization) and better numerical stability with softmax.
+
+## 7. Gradient-Based Learning
+
+### Empirical Risk Minimization (ERM)
+
+$$\min_{\boldsymbol{\theta}} R_{\text{emp}}(\boldsymbol{\theta}) = \frac{1}{N}\sum_{i=1}^N L\bigl(f^*(\mathbf{x}_i),\, f(\mathbf{x}_i; \boldsymbol{\theta})\bigr)$$
+
+### Gradient Descent (GD)
+
+From Taylor expansion: $R(\boldsymbol{\theta} + \epsilon\boldsymbol{\phi}) \approx R(\boldsymbol{\theta}) + \epsilon\boldsymbol{\phi}^T\nabla R(\boldsymbol{\theta})$
+
+To decrease $R$, choose $\boldsymbol{\phi} \propto -\nabla R(\boldsymbol{\theta})$:
+
+$$\boxed{\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \epsilon \nabla R(\boldsymbol{\theta}_k)}$$
+
+- $\epsilon$ = **learning rate / step size**
+- $-\nabla R$ = **steepest descent direction**
+
+### Convergence (Linear Regression Case)
+
+For $\min_\mathbf{w} \frac{1}{2}\|X\mathbf{w} - \mathbf{y}\|^2$, GD converges if:
+
+$$\epsilon < \frac{2}{\max_i \lambda_i(X^TX)}$$
+
+Convergence rate depends on the **condition number**:
+$$\kappa(X^TX) = \frac{\max_i \lambda_i(X^TX)}{\min_i \lambda_i(X^TX)} \geq 1$$
+
+$$\|\mathbf{e}_k\| \leq \left(1 - \frac{1}{\kappa(X^TX)}\right)^k \|\mathbf{e}_0\|$$
+
+Larger condition number → slower convergence.
+
+### General Convergence
+If $\nabla R$ is Lipschitz and $\nabla^2 R$ is bounded, then for small enough $\epsilon$:
+$$\|\nabla R(\boldsymbol{\theta}_k)\| \to 0 \quad \text{as } k \to \infty$$
+
+## 8. Summary Table
+
+| Concept | Key Formula / Idea |
+|---------|-------------------|
+| Adaptive basis | $f(\mathbf{x}) = \mathbf{w}^T\boldsymbol{\phi}(\mathbf{x};\boldsymbol{\theta})$ — learn $\boldsymbol{\theta}$ from data |
+| Shallow NN | $f = \mathbf{w}^T g(W\mathbf{x}+\mathbf{c}) + b$ |
+| Hidden units | Learn a new feature representation $\mathbf{h} = g(W\mathbf{x}+\mathbf{c})$ |
+| Universal approx. | Any continuous $f^*$ can be approximated with enough neurons |
+| Overcomes CoD | NN error $\mathcal{O}(m^{-1})$ vs. linear basis $\mathcal{O}(m^{-2\alpha/d})$ |
+| Gradient descent | $\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \epsilon\nabla R(\boldsymbol{\theta})$ |
+
+---
+
+# Lecture 3
+
+## 1. Deep Fully-Connected Neural Networks
+
+### Shallow (1-hidden-layer) Network
+$$\mathbf{h} = g(W\mathbf{x} + \mathbf{b}), \quad \hat{y} = \mathbf{w}^T\mathbf{h} + c$$
+
+### Deep Network ($\ell$ layers)
+$$\mathbf{h}^{(i)} = g^{(i)}\!\left(W^{(i)}\mathbf{h}^{(i-1)} + \mathbf{b}^{(i)}\right), \quad \mathbf{h}^{(0)} = \mathbf{x}$$
+$$\hat{y} = \mathbf{w}^T\mathbf{h}^{(\ell)} + c$$
+
+### Why Deep?
+| Pro | Con |
+|-----|-----|
+| Efficient approximation of complex/oscillatory functions | Harder, non-convex optimization |
+| Better generalisation (with right training/regularisation) | Prone to overfitting |
+| Sequential feature extraction as a useful prior | More compute required |
+
+## 2. Stochastic Gradient Descent (SGD)
+
+### Empirical Risk Structure
+$$R(\boldsymbol{\theta}) = \frac{1}{N}\sum_{i=1}^{N} R_i(\boldsymbol{\theta}), \quad R_i(\boldsymbol{\theta}) = L\!\left(y^{(i)}, f(\mathbf{x}^{(i)};\boldsymbol{\theta})\right)$$
+
+### Gradient Descent (GD) — $\mathcal{O}(N)$ per step
+$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \epsilon\,\frac{1}{N}\sum_{i=1}^{N}\nabla R_i(\boldsymbol{\theta}_k)$$
+
+### SGD — $\mathcal{O}(1)$ per step
+$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \epsilon\,\nabla R_{\gamma_k}(\boldsymbol{\theta}_k), \quad \gamma_k \sim \text{Uniform}\{1,\ldots,N\}$$
+- **Unbiased**: $\mathbb{E}[\boldsymbol{\theta}_{k+1}\mid\boldsymbol{\theta}_k] = \boldsymbol{\theta}_k - \epsilon\frac{1}{N}\sum_i \nabla R_i(\boldsymbol{\theta}_k)$
+
+### Mini-batch SGD — $\mathcal{O}(M)$ per step
+$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \epsilon\,\frac{1}{M}\sum_{j\in B_k}\nabla R_j(\boldsymbol{\theta}_k), \quad |B_k|=M$$
+- One full pass over $\{1,\ldots,N\}$ = **one epoch**
+
+### SGD Convergence (Robbins–Monro condition)
+Fixed learning rate → SGD may **not** converge (residual variance $\to \frac{\epsilon}{2-\epsilon}$).  
+Decaying learning rate converges if:
+
+> $\sum_{k=0}^{\infty}\epsilon_k = \infty \quad$: ensures the steps are large enough in total to actually reach the minimum, no matter how far away you start. If steps decay too fast, you might freeze before converging.
+
+and
+
+> $\sum_{k=0}^{\infty}\epsilon_k^2 < \infty$: ensures steps decay fast enough that the noise from stochastic gradients eventually dies out, eliminating the residual variance problem.
+
+### Momentum (Polyak, 1964)
+Reduces zig-zag behaviour by accumulating past gradients:
+$$\mathbf{v}_{k+1} = \alpha\mathbf{v}_k - \epsilon\,\nabla R(\boldsymbol{\theta}_k)$$
+$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k + \mathbf{v}_{k+1}$$
+- $\alpha \in (0,1)$: momentum parameter ($\alpha=0$ ↔ plain GD)
+- Physics analogy for $\alpha$: ball rolling with friction $\leftrightarrow$ second law $\frac{d\mathbf{v}}{dt} = -\frac{\gamma}{m}\mathbf{v} + \frac{1}{m}F_\text{ext}$. 
+- $\alpha \to 0$: high friction, ball stops immediately $\to$ reduces to plain GD
+- $\alpha \to 1$: frictionless, velocity accumulates indefinitely $\to$ risk of overshooting
+- Typical $\alpha \approx 0.9$: effective memory of $\frac{1}{1-\alpha} = 10$ steps back
+
+**Why it helps in narrow valleys:**
+
+$\nabla R$ oscillates left-right in the steep direction but consistently points 
+downhill in the flat direction. Momentum **cancels** oscillating components 
+(average to zero) while **accumulating** consistent downhill components — 
+smoothing the trajectory and accelerating convergence.
+
+
+### Other SGD Variants
+| Method | Key idea |
+|--------|----------|
+| Adagrad / Adadelta | Adaptive per-parameter learning rates |
+| Adam / RMSprop | Momentum + adaptive rates |
+| SVRG | Variance reduction |
+
+## 3. Backpropagation Algorithm
+
+### Why Needed?
+Chain rule alone is $\mathcal{O}(\text{nodes}^2)$; backprop is $\mathcal{O}(\text{nodes})$ by reusing stored intermediate values.
+
+### Chain Rule
+**Scalar:** $\dfrac{dz}{dx} = \dfrac{dz}{dy}\dfrac{dy}{dx}$
+
+**Vector** ($f:\mathbb{R}^m\to\mathbb{R}^n$, $g:\mathbb{R}^n\to\mathbb{R}$):
+$$\nabla_{\mathbf{x}} z = \left(\frac{\partial \mathbf{y}}{\partial \mathbf{x}}\right)^{\!T}\!\nabla_{\mathbf{y}} z$$
+
+### Backprop — 3 Steps (1D linear example)
+
+**Setup:** $h^{(j)} = w^{(j)}h^{(j-1)}$, $\hat{y} = wh^{(\ell)}$, $h^{(0)}:=x$
+
+**Step 1 — Forward pass** (store all hidden states):
+$$h^{(1)}\to h^{(2)}\to\cdots\to h^{(\ell)}\to\hat{y}$$
+
+**Step 2 — Backward pass** (propagate $p = dR/dh$):
+$$\hat{p} = \frac{\partial L}{\partial \hat{y}}, \quad p^{(\ell)} = \hat{p}\,w, \quad p^{(i)} = p^{(i+1)}w^{(i+1)}$$
+
+**Step 3 — Parameter gradients:**
+$$\frac{dR}{dw} = \hat{p}\,h^{(\ell)}, \qquad \frac{dR}{dw^{(j)}} = p^{(j)}\,h^{(j-1)}$$
+
+### Key Properties
+- **Two passes** only (forward + backward)
+- **Cost:** $\mathcal{O}(\text{\#nodes})$
+- **Storage:** only forward states $h^{(i)}$ need to be kept
+
+### Why Backprop beats Naive Chain Rule
+Naive chain rule recomputes intermediate derivatives **multiple times** — 
+for a node deep in the network, its gradient contribution gets recomputed 
+once per path leading back to it → $\mathcal{O}(\text{nodes}^2)$.
+
+Backprop computes each node's gradient **exactly once** by storing forward 
+states and reusing $p^{(t)}$ in the backward pass → $\mathcal{O}(\text{nodes})$.
+
+### Numerical Example (3-layer, 1D)
+**Setup:** $\ell = 3$, $w^{(1)}=2, w^{(2)}=3, w^{(3)}=4$, $w=1$, $x=1$
+
+**Forward pass:**
+$$h^{(1)} = 2, \quad h^{(2)} = 6, \quad h^{(3)} = 24, \quad \hat{y} = 24$$
+
+**Backward pass** (assume $\frac{\partial L}{\partial \hat{y}} = \hat{p} = 1$):
+$$p^{(3)} = \hat{p} \cdot w = 1, \quad p^{(2)} = p^{(3)} \cdot w^{(3)} = 4, \quad p^{(1)} = p^{(2)} \cdot w^{(2)} = 12$$
+
+**Parameter gradients:**
+$$\frac{dR}{dw^{(1)}} = p^{(1)} \cdot h^{(0)} = 12 \cdot 1 = 12$$
+$$\frac{dR}{dw^{(2)}} = p^{(2)} \cdot h^{(1)} = 4 \cdot 2 = 8$$
+$$\frac{dR}{dw^{(3)}} = p^{(3)} \cdot h^{(2)} = 1 \cdot 6 = 6$$
+
+### Divergent Paths
+When a node $h$ feeds into multiple downstream nodes (e.g. $f_1$ and $f_2$),
+its gradient is the **sum of contributions from all paths**:
+
+$$\frac{\partial L}{\partial h} = \frac{\partial L}{\partial f_1}\frac{\partial f_1}{\partial h} + \frac{\partial L}{\partial f_2}\frac{\partial f_2}{\partial h}$$
+
+**Example:** $h = 2$, $f_1 = 3h$, $f_2 = h^2$, $L = f_1 + f_2$
+
+**Forward pass:**
+$$h = 2, \quad f_1 = 6, \quad f_2 = 4, \quad L = 10$$
+
+**Backward pass:**
+$$\frac{\partial L}{\partial f_1} = 1, \quad \frac{\partial L}{\partial f_2} = 1$$
+$$\frac{\partial f_1}{\partial h} = 3, \quad \frac{\partial f_2}{\partial h} = 2h = 4$$
+
+**Gradient accumulation at $h$:**
+$$\frac{\partial L}{\partial h} = 1 \cdot 3 + 1 \cdot 4 = 7$$
+
+> **Intuition:** $h$ influences $L$ through *both* $f_1$ and $f_2$ — 
+> ignoring either path would underestimate $h$'s total effect on $L$. 
+> This generalizes to $n$ downstream nodes by summing all $n$ contributions.
+> Frameworks like TensorFlow/PyTorch handle this automatically.
+
+### TensorFlow / AD in a Nutshell
+Every operation `op` implements:
+- `op.forward(x)` → computes $f(\mathbf{x})$
+- `op.backward(x)` → computes $\nabla f(\mathbf{x})$
+
+Backprop chains these automatically over any acyclic computational graph.
+
+## Summary Table
+
+| Topic | Key formula / idea |
+|-------|--------------------|
+| Deep NN | $\mathbf{h}^{(i)} = g^{(i)}(W^{(i)}\mathbf{h}^{(i-1)}+\mathbf{b}^{(i)})$ |
+| GD | $\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} - \epsilon\nabla R(\boldsymbol{\theta})$ |
+| SGD | Replace full gradient with single-sample estimate |
+| Mini-batch | Average gradient over batch $B_k$ of size $M$ |
+| Momentum | Accumulate velocity: $\mathbf{v}\leftarrow\alpha\mathbf{v}-\epsilon\nabla R$ |
+| Backprop | Forward store → backward propagate → param gradients |
+
+---
+
+# Lecture 4 — CNN
+
+## 1. Limitations of Fully Connected Neural Networks (FCNN)
+
+$$\mathbf{h}^{(i+1)} = \text{ReLU}\!\left(W^{(i+1)}\mathbf{h}^{(i)} + \mathbf{b}^{(i+1)}\right), \quad \mathbf{h}^{(0)} = \mathbf{x}$$
+
+**Permutation Invariance Problem:**  
+If $f \in \mathcal{H}$, then for any permutation $p$ on indices, $f_p(\mathbf{x}) \equiv f(x_{p(1)}, \ldots, x_{p(d)}) \in \mathcal{H}$.  
+- FCNN treats all permutations of the input as equally learnable (valid inputs).  
+- Since every permutation of the input lives in the same hypothesis space $\mathcal{H}$, the network wastes capacity learning all possible permutations rather than exploiting the fact that nearby pixels are semantically related.
+- **Loses spatial/temporal structure** (images, time series become meaningless after random permutation).
+
+## 2. Convolution Operation
+
+### Continuous Convolution
+$$s(t) = (x * w)(t) = \int_{-\infty}^{+\infty} x(a)\, w(t - a)\, da$$
+
+- $x(t)$ = **signal / input**
+- $w(t)$ = **kernel / filter**
+- $s = x * w$ = **feature map**
+- Commutative: $x * w = w * x$
+
+### Discrete Convolution
+$$s(t) = (x * w)(t) = \sum_{a=-\infty}^{+\infty} x(a)\, w(t - a)$$
+
+### 2D Discrete Convolution (Images)
+$$S(i, j) = (I * K)(i, j) = \sum_m \sum_n I(m, n)\, K(i - m,\, j - n)$$
+
+### Cross-Correlation vs. Convolution
+| | Formula |
+|---|---|
+| **Convolution** | $S(i,j) = \sum_m \sum_n I(i-m, j-n)\, K(m,n)$ |
+| **Cross-correlation** | $S(i,j) = \sum_m \sum_n I(i+m, j+n)\, K(m,n)$ |
+
+> ⚠️ Deep learning libraries (e.g., PyTorch, TensorFlow) implement **cross-correlation** but call it "convolution."
+
+## 3. Boundary Conditions
+
+| Type | Description | Output Size |
+|---|---|---|
+| **Circular** | Wraps signal around | Same as input |
+| **Valid** | No padding; kernel fully inside | $n - k + 1$ |
+| **Same (zero-pad)** | Pads with zeros to match input size | Same as input |
+
+## 4. Convolution as a Linear Operation
+
+A 1D convolution with kernel $\mathbf{w} = (w_1, w_2, w_3)$ is equivalent to a sparse matrix multiply:
+
+$$\mathbf{w} * \mathbf{x} = A(\mathbf{w})\,\mathbf{x}, \quad A(\mathbf{w}) = \begin{pmatrix} w_2 & w_3 & 0 & 0 & 0 \\ w_1 & w_2 & w_3 & 0 & 0 \\ 0 & w_1 & w_2 & w_3 & 0 \\ 0 & 0 & w_1 & w_2 & w_3 \\ 0 & 0 & 0 & w_1 & w_2 \end{pmatrix}$$
+
+## 5. Why CNNs? (Three Motivations)
+
+### Motivation 0: Effective Feature Extractors
+Different kernels detect different features (blur, edges, etc.).
+
+### Motivation 1: Sparse Interactions
+Each output neuron encodes the prior that local features (**local receptive field**) matter; edges, textures, corners are determined by nearby pixels, not pixels across the image
+
+| | Computational Cost | 
+|---|---|
+| **CNN** | $\mathcal{O}(k \times l \times m \times n)$ |
+| **FCNN** | $\mathcal{O}(m^2 \times n^2)$ |
+
+For image $m \times n$ with kernel $k \times l$: significant savings when $k, l \ll m, n$.
+
+### Motivation 2: Parameter Sharing (Tied Weights)
+The same kernel is reused at every position. Encodes the prior that features are position-agnostic; a horizontal edge detector should work the same everywhere in the image, not just where it was trained
+
+| | Parameters stored |
+|---|---|
+| **CNN** | $\mathcal{O}(k \times l)$ |
+| **Without sharing** | $\mathcal{O}(m \times n \times k \times l)$ |
+
+### Motivation 3: Translation Equivariance → Invariance
+
+**Equivariance:** $f(g(x)) = g(f(x))$  
+**Invariance:** $f(g(x)) = f(x)$
+
+**Convolutions are equivariant to translations.** Let $T_\tau(x)(t) = x(t - \tau)$:
+
+$$w * T_\tau(x) = T_\tau(w * x)$$
+
+**Proof:**
+$$[w * T_\tau(x)](t) = \int w(s)\, x(t - s - \tau)\, ds = T_\tau(w * x)(t) \quad \checkmark$$
+
+Element-wise nonlinearities $\sigma$ are also equivariant to translation:
+$$\sigma(T(\mathbf{x})) = T(\sigma(\mathbf{x}))$$
+
+**Composition of equivariant maps is equivariant** — so each CNN layer  
+$$\mathbf{h}^{(i+1)} = \sigma(\mathbf{w}^{(i+1)} * \mathbf{h}^{(i)} + \mathbf{b})$$
+is equivariant to translations.
+
+> **Intuition:** Conv layers say *"there's a cat, and it's over there"* — 
+> they track the feature's location as it moves across the image.
+
+**Building invariance:** If $f_1, \ldots, f_\ell$ are equivariant and $F$ is 
+invariant w.r.t. $g$, then $F \circ f_\ell \circ \cdots \circ f_1$ is invariant. 
+A deep CNN:
+
+$$\mathbf{h}^{(i+1)} = \sigma(W * \mathbf{h}^{(i)} + \mathbf{b}), \quad \hat{y} = \mathbf{1}^T \mathbf{h}^{(\ell)} + c$$
+
+is **translation invariant** — a key inductive bias for image tasks.
+
+**Why does the final step $\hat{y} = \mathbf{1}^T\mathbf{h}^{(\ell)} + c$ give invariance?**
+
+$\mathbf{1}^T\mathbf{h}^{(\ell)}$ **sums over all spatial positions** — it doesn't 
+care *where* a feature is, only *whether* it exists anywhere in the image. 
+This is the invariant map $F$ that collapses the remaining spatial information.
+
+> **Intuition:** The final aggregation says *"there's a cat somewhere"* — 
+> discarding location entirely.
+
+**Summary of the two-stage process:**
+
+| Stage | Operation | Property | Intuition |
+|-------|-----------|----------|-----------|
+| Conv + ReLU layers | $\mathbf{h}^{(i+1)} = \sigma(W * \mathbf{h}^{(i)} + \mathbf{b})$ | Equivariant | Tracks *where* features are |
+| Final aggregation | $\hat{y} = \mathbf{1}^T\mathbf{h}^{(\ell)} + c$ | Invariant | Discards location; detects *whether* features exist |
+
+Invariance therefore emerges from **equivariant feature extraction** followed by **location-discarding aggregation** — not from any single layer alone.
+
+## 6. Pooling Layers
+
+Pooling builds **approximate invariance** to small translations/deformations by summarising local regions into a single value — reducing spatial dimensions while retaining dominant features.
+
+### Max Pooling (1D, stride $p$)
+$$T_{mp}(\mathbf{x})_k = \max_{i = kp,\, \ldots,\, (k+1)p} x_i$$
+
+| Type | Formula | Description | Use |
+|---|---|---|---|
+| **Max pooling** | $\max_{i \in \text{window}} x_i$ | Takes the maximum in each window | Preserves dominant features |
+| **Average pooling** | $\frac{1}{p}\sum_{i \in \text{window}} x_i$ | Takes the mean in each window | Smoother, preserves overall signal |
+
+> **Intuition:** Max pooling says *"did this feature appear anywhere in this 
+> region?"* — a small translation of the feature stays within the window and 
+> still produces the same max output, hence approximate invariance.
+
+## 7. Tensor Convolution (Multi-channel)
+
+- Input: $H \times W \times C_{in}$
+- Each filter: $k \times l \times C_{in}$ (one per output channel)
+- Each filter produces one 2D output channel via element-wise convolution + sum over input channels
+- Output: $H' \times W' \times C_{out}$, where $C_{out} = \#\text{filters}$
+
+## 8. CNN Architecture
+
+```
+Input → [Conv → BN → ReLU → Pool] × L → Flatten → FCNN → Output
+```
+
+Convolutional layers extract hierarchical spatial features; FCNN head performs final classification/regression.
+
+---
+
+### Layer-by-Layer Reference
+
+#### CONV Layer
+
+Each filter slides across the input, computing dot products over a local region spanning **all input channels**.
+
+**Notation:**
+- Input: $W \times H \times C_{in}$
+- Kernel size: $k \times k$
+- Number of filters: $C_{out}$
+- Stride: $s$ (how many pixels the kernel moves each step)
+- Padding: $p$ (zeros added to border; $p=0$ = valid, $p=\lfloor k/2 \rfloor$ = same)
+
+**Output spatial dimensions:**
+$$W_{out} = \left\lfloor\frac{W - k + 2p}{s}\right\rfloor + 1, \qquad H_{out} = \left\lfloor\frac{H - k + 2p}{s}\right\rfloor + 1$$
+
+> **Intuition:** Numerator $W - k + 2p$ = how much space the kernel has to slide. Dividing by stride $s$ gives number of steps. $+1$ counts the starting position.
+
+**Output volume:** $W_{out} \times H_{out} \times C_{out}$
+
+**Parameters:**
+
+| | Formula | Why |
+|--|---------|-----|
+| Weights | $k \times k \times C_{in} \times C_{out}$ | Each of $C_{out}$ filters has $k \times k \times C_{in}$ weights — must span all input channels |
+| Biases | $C_{out}$ | One bias per filter |
+| **Total** | $k \times k \times C_{in} \times C_{out} + C_{out}$ | |
+
+> **Note:** Weights are **shared across spatial positions** — the same filter is applied everywhere. This is why parameter count is $\mathcal{O}(k^2)$ regardless of input size, vs $\mathcal{O}(W^2H^2)$ for FC layers.
+
+---
+
+#### Activation Layer (ReLU / Leaky ReLU / Tanh etc.)
+
+Applied **element-wise** after convolution — introduces nonlinearity. Without nonlinearity, stacking conv layers collapses into a single linear operation.
+
+**Output volume:** Same as input — $W \times H \times C$ (unchanged)
+
+**Parameters:** $0$
+
+---
+
+#### POOL Layer
+
+Downsamples spatial dimensions by summarising local regions. Builds approximate translation invariance.
+
+**Notation:** Pool size $p_{pool}$, typically stride = $p_{pool}$ (non-overlapping)
+
+**Output spatial dimensions:**
+$$W_{out} = \left\lfloor\frac{W}{p_{pool}}\right\rfloor, \qquad H_{out} = \left\lfloor\frac{H}{p_{pool}}\right\rfloor$$
+
+**Output volume:** $W_{out} \times H_{out} \times C_{in}$ — **channels unchanged**
+
+**Parameters:** $0$
+
+> **Intuition:** Max pooling asks *"did this feature appear anywhere in this region?"* — a small translation stays within the window and still produces the same max, giving approximate translation invariance.
+
+---
+
+#### BATCHNORM Layer
+
+Normalises activations across the batch, then rescales with learnable parameters.
+
+$$\text{BN}(H; \boldsymbol{\gamma}, \boldsymbol{\beta})^{(i)} = \boldsymbol{\gamma} \circ \left(\frac{\mathbf{h}^{(i)} - \boldsymbol{\mu}}{\boldsymbol{\sigma}}\right) + \boldsymbol{\beta}$$
+
+**Output volume:** Same as input — $W \times H \times C$ (unchanged)
+
+**Parameters:**
+
+| | Formula | Why |
+|--|---------|-----|
+| $\boldsymbol{\gamma}$ (scale) | $C$ | One per channel — shared across all spatial positions |
+| $\boldsymbol{\beta}$ (shift) | $C$ | One per channel — shared across all spatial positions |
+| **Total** | $2 \times C$ | |
+
+> **Training vs Inference:** During training, uses batch statistics $\boldsymbol{\mu}, \boldsymbol{\sigma}$. During inference, uses moving averages accumulated during training.
+
+---
+
+#### FLATTEN Layer
+
+Reshapes the 3D volume into a 1D vector to feed into FC layers.
+
+$$W \times H \times C \xrightarrow{\text{flatten}} (W \times H \times C)$$
+
+**Output size:** $n_{in} = W \times H \times C$
+
+**Parameters:** $0$ — pure reshaping, no learnable parameters
+
+> **Example:** A $8 \times 8 \times 16$ volume flattens to a vector of size $8 \times 8 \times 16 = 1024$.
+
+---
+
+#### FC (Fully Connected) Layer
+
+Every input neuron connects to every output neuron. Used as the final classification/regression head.
+
+**Notation:** Flattened input size $n_{in}$, output size $n_{out}$
+
+**Output size:** $n_{out}$
+
+**Parameters:**
+
+| | Formula | Why |
+|--|---------|-----|
+| Weights | $n_{in} \times n_{out}$ | Every input connected to every output |
+| Biases | $n_{out}$ | One per output neuron |
+| **Total** | $n_{in} \times n_{out} + n_{out}$ | |
+
+> FC layers typically dominate total parameter count — e.g. $1024 \times 10 + 10 = 10250$ vs a conv layer's $3\times3\times8\times16+16 = 1168$.
+
+---
+
+### Quick Reference Table
+
+| Layer | Output Size | Parameters | Notes |
+|-------|------------|------------|-------|
+| **CONV** | $W_{out} \times H_{out} \times C_{out}$ | $k^2 \cdot C_{in} \cdot C_{out} + C_{out}$ | Shared weights across spatial positions |
+| **Activation** | $W \times H \times C$ (unchanged) | $0$ | Element-wise nonlinearity |
+| **POOL** | $\lfloor W/p \rfloor \times \lfloor H/p \rfloor \times C$ | $0$ | Channels unchanged |
+| **BATCHNORM** | $W \times H \times C$ (unchanged) | $2 \times C$ | $\gamma, \beta$ per channel only |
+| **FLATTEN** | $W \cdot H \cdot C$ | $0$ | Pure reshape |
+| **FC** | $n_{out}$ | $n_{in} \cdot n_{out} + n_{out}$ | Dense connections; dominates param count |
+
+---
+
+### Worked Example
+
+For the architecture: Input $32\times32\times3$ → CONV3-8 → BN → ReLU → POOL-2 → CONV3-16 → FLATTEN → FC-10:
+
+| Layer | Output Volume | Parameters |
+|-------|--------------|------------|
+| Input | $32\times32\times3$ | 0 |
+| CONV3-8 | $32\times32\times8$ | $3\times3\times3\times8 + 8 = 224$ |
+| BATCHNORM | $32\times32\times8$ | $2\times8 = 16$ |
+| ReLU | $32\times32\times8$ | 0 |
+| POOL-2 | $16\times16\times8$ | 0 |
+| CONV3-16 | $16\times16\times16$ | $3\times3\times8\times16 + 16 = 1168$ |
+| FLATTEN | $16\times16\times16 = 4096$ | 0 |
+| FC-10 | $10$ | $4096\times10 + 10 = 40970$ |
+
+## 3D CNN (Supplementary)
+
+Extends 2D CNN by sliding a $k \times k \times k$ kernel across 
+**width, height and depth/time** — captures spatial AND temporal features.
+
+**Common use cases:**
+- Video understanding (depth = time frames)
+- Medical imaging (depth = MRI/CT slices)
+
+### Dimension Formulas
+
+**Notation:** Input $W \times H \times D \times C_{in}$, kernel $k \times k \times k$, 
+stride $s$, padding $p$
+
+$$W_{out} = \left\lfloor\frac{W - k + 2p}{s}\right\rfloor + 1$$
+$$H_{out} = \left\lfloor\frac{H - k + 2p}{s}\right\rfloor + 1$$
+$$D_{out} = \left\lfloor\frac{D - k + 2p}{s}\right\rfloor + 1$$
+
+**Output volume:** $W_{out} \times H_{out} \times D_{out} \times C_{out}$
+
+### Parameter Count
+
+| | Formula |
+|---|---|
+| **Weights** | $k^3 \times C_{in} \times C_{out}$ |
+| **Biases** | $C_{out}$ |
+| **Total** | $k^3 \times C_{in} \times C_{out} + C_{out}$ |
+
+### 2D vs 3D Comparison
+
+| | 2D CNN | 3D CNN |
+|---|---|---|
+| Kernel | $k \times k$ | $k \times k \times k$ |
+| Captures | Spatial features | Spatial + temporal features |
+| Weights | $k^2 \times C_{in} \times C_{out}$ | $k^3 \times C_{in} \times C_{out}$ |
+| Use case | Images | Video, volumetric data |
+
+> **Note:** 3D CNNs are significantly more computationally expensive — 
+> parameter count scales as $k^3$ vs $k^2$, making them costly for large inputs.
+
+## 9. Key Comparisons: CNN vs. FCNN
+
+| Property | FCNN | CNN |
+|---|---|---|
+| Connectivity | Dense (all-to-all) | Local (receptive field) |
+| Parameters | $\mathcal{O}(m^2 n^2)$ | $\mathcal{O}(kl)$ |
+| Compute | $\mathcal{O}(m^2 n^2)$ | $\mathcal{O}(klmn)$ |
+| Permutation of input | Invariant | Sensitive (preserves structure) |
+| Translation | No built-in symmetry | Equivariant / Invariant |
+
+---
+
+# Lecture 5: Recurrent Neural Networks
+
+## 1. Time Series Tasks
+
+| Task | Input | Output | Examples |
+|---|---|---|---|
+| **Sequence Prediction** | $x^{(1)}, \ldots, x^{(t)}$ | $x^{(t+1)}$ or $x^{(t+1)}, \ldots, x^{(t+\tau)}$ | Stock price, weather |
+| **Sequence Classification/Regression** | $x^{(1)}, \ldots, x^{(\tau)}$ | Label $y$ (discrete or continuous) | Fraud detection, arrhythmia |
+| **Sequence-to-Sequence** | $x^{(1)}, \ldots, x^{(\tau)}$ | $y^{(1)}, \ldots, y^{(\tau)}$ | Machine translation |
+| **Sequence Generation** | Seed $x^{(1)}, \ldots, x^{(\tau)}$ | Extended sequence $x^{(\tau+1)}, x^{(\tau+2)}, \ldots$ | Poetry, music |
+
+**Supervised Learning Formulation:**
+
+$$y^{(t)} = F_t^*\!\left(x^{(1)}, x^{(2)}, \ldots, x^{(\tau)}\right), \quad \text{goal: learn } \widehat{F}_t \approx F_t^*$$
+
+## 2. Dynamical Systems & Parameter Sharing
+
+**Autonomous dynamical system** (parameters shared in time):
+$$s^{(t+1)} = f\!\left(s^{(t)};\, \theta\right)$$
+
+**With external inputs:**
+$$s^{(t)} = f\!\left(s^{(t-1)},\, x^{(t)},\, \theta\right)$$
+
+> **Key insight:** Unlike feed-forward dynamics $h^{(t+1)} = f(h^{(t)}; \theta^{(t)})$, a single $\theta$ is shared across all time steps.
+
+## 3. Simple RNN
+
+$$\boxed{h^{(t)} = \sigma_r\!\left(W h^{(t-1)} + U x^{(t)} + b\right)}$$
+
+$$\boxed{\widehat{y}^{(t)} = \sigma_o\!\left(V h^{(t)} + c\right)}$$
+
+- **Trainable parameters:** $(W, U, b, V, c)$
+- **Recurrent activation $\sigma_r$:** typically $\tanh$
+- **Initialization:** $h^{(0)} = \mathbf{0}$
+- **Output activation $\sigma_o$:** depends on task
+
+### Activation Function Comparison
+
+| Activation | Peak Gradient | Issues in RNNs |
+|---|---|---|
+| $\tanh$ | 1 (at $a=0$) | Saturation to $\pm 1$ |
+| Sigmoid | 0.25 | Non-zero center → bias accumulation |
+| ReLU | Unbounded | Dead neurons are permanently dead (shared weights) |
+
+**Why tanh is preferred:** When $h^{(t)}$ is small and $w \approx 1$, $h^{(t)} \approx h^{(t-1)}$ and gradients $\approx 1$ (stable identity dynamics).
+
+## 4. Loss Functions
+
+**Single prediction** (Tasks I & II — terminal loss):
+$$L\!\left(y,\, \widehat{y}^{(\tau)}\right) = \frac{1}{2}\left\|y - \widehat{y}^{(\tau)}\right\|^2$$
+
+**Sequence prediction** (Task III — sum over time):
+$$\sum_{t=1}^{\tau} L\!\left(y^{(t)},\, \widehat{y}^{(t)}\right) = \frac{1}{2}\sum_{t=1}^{\tau} \left\|y^{(t)} - \widehat{y}^{(t)}\right\|^2$$
+
+## 5. Backpropagation Through Time (BPTT)
+
+1. **Unroll** the computational graph
+2. **Compute deltas:** $p^{(t)} := \nabla_{h^{(t)}} L$
+3. **Sum contributions** across all time steps (due to parameter sharing)
+
+**Backward recursion (linear 1D example):**
+
+$$\frac{dL}{dw} = \frac{\partial L}{\partial \widehat{y}}\!\left(y, \widehat{y}^{(\tau)}\right) \sum_{t=1}^{\tau} w^{\tau - t}\, h^{(t-1)} = \sum_{t=1}^{\tau} (\tau - t)\, w^{\tau - t - 1}\, x^{(t)}$$
+
+$$p^{(t-1)} = w\, p^{(t)}, \qquad p^{(\tau)} = \frac{\partial L}{\partial \widehat{y}}\!\left(y, \widehat{y}^{(\tau)}\right)$$
+
+## 6. Gradient Explosion & Vanishing
+
+In the linear scalar RNN $h^{(t)} = w h^{(t-1)} + x^{(t)}$:
+
+| Condition | Effect |
+|---|---|
+| $w > 1$ | **Gradient explosion** — gradients diverge for large $\tau$ |
+| $w < 1$ | **Gradient vanishing** — earlier inputs receive exponentially small weight |
+
+> This is the fundamental challenge: no $w$ avoids both problems simultaneously.
+
+**In the matrix case** ($W \in \mathbb{R}^{n \times n}$), gradients scale with 
+$W^\tau$ — stability requires **all eigenvalues** of $W$ to equal exactly 1, 
+which is practically impossible to maintain throughout training.
+
+## 7. Long Short-Term Memory (LSTM)
+
+LSTM introduces a **cell state** $C^{(t)}$ that flows through time with minimal modification, controlled by **trainable gates**.
+
+The cell state update:
+$$C^{(t)} = f^{(t)} \cdot C^{(t-1)} + i^{(t)} \cdot \tilde{C}^{(t)}$$
+
+The gradient flowing back through time:
+$$\frac{\partial C^{(t)}}{\partial C^{(t-1)}} = f^{(t)}$$
+
+Since $f^{(t)}$ is a **learned gate** rather than a fixed weight raised to 
+power $\tau$, the network can learn $f^{(t)} \approx 1$ to preserve gradients 
+over long sequences — acting as a **gradient highway**.
+
+### Full LSTM Equations
+
+$$f^{(t)} = \sigma\!\left(W_f h^{(t-1)} + U_f x^{(t)} + b_f\right) \quad \text{(forget gate)}$$
+
+$$i^{(t)} = \sigma\!\left(W_i h^{(t-1)} + U_i x^{(t)} + b_i\right) \quad \text{(input gate)}$$
+
+$$o^{(t)} = \sigma\!\left(W_o h^{(t-1)} + U_o x^{(t)} + b_o\right) \quad \text{(output gate)}$$
+
+$$C^{(t)} = f^{(t)} \cdot C^{(t-1)} + i^{(t)} \cdot \sigma_c\!\left(W_c h^{(t-1)} + U_c x^{(t)} + b_c\right)$$
+
+$$h^{(t)} = o^{(t)} \cdot \sigma_h\!\left(C^{(t)}\right)$$
+
+| Component | Role |
+|---|---|
+| Forget gate $f^{(t)}$ | How much of $C^{(t-1)}$ to keep |
+| Input gate $i^{(t)}$ | How much new info to write into $C^{(t)}$ |
+| Output gate $o^{(t)}$ | How much of $C^{(t)}$ to expose as $h^{(t)}$ |
+| Cell state $C^{(t)}$ | Long-term memory highway |
+| Hidden state $h^{(t)}$ | Short-term/working memory, used for predictions |
+
+## 8. Gated Recurrent Unit (GRU)
+
+Simpler gated variant with **no separate cell state**:
+
+$$z_t = \sigma\!\left(W_z \cdot [h_{t-1},\, x_t]\right) \quad \text{(update gate)}$$
+
+$$r_t = \sigma\!\left(W_r \cdot [h_{t-1},\, x_t]\right) \quad \text{(reset gate)}$$
+
+$$\tilde{h}_t = \tanh\!\left(W \cdot [r_t * h_{t-1},\, x_t]\right)$$
+
+$$h_t = (1 - z_t) * h_{t-1} + z_t * \tilde{h}_t$$
+
+
+| Gate | Role | LSTM Equivalent |
+|---|---|---|
+| Update gate $z_t$ | How much to update hidden state | Forget + input gate combined |
+| Reset gate $r_t$ | How much past state influences candidate | Partial forget |
+
+**GRU vs LSTM:**
+
+| | LSTM | GRU |
+|---|---|---|
+| Gates | 3 (forget, input, output) | 2 (update, reset) |
+| States | Cell state + hidden state | Hidden state only |
+| Parameters | More | Fewer |
+| Performance | Similar | Similar |
+| Preferred when | Long sequences, complex tasks | Compute is limited |
+
+> Both solve vanishing gradients via **learned gating** rather than fixed 
+> weight multiplication — allowing gradients to flow selectively across 
+> long time horizons.
+
+## 9. Deep RNNs
+
+**Shallow RNN** — one recurrent layer:
+$$h^{(t)} = \sigma_r\!\left(W h^{(t-1)} + U x^{(t)} + b\right), \qquad \widehat{y}^{(t)} = \sigma_o\!\left(V h^{(t)} + c\right)$$
+
+**Deep RNN** — stacked recurrent layers (example with 2 layers):
+$$h^{(t)} = \sigma_r\!\left(W h^{(t-1)} + U x^{(t)} + b\right)$$
+$$z^{(t)} = \sigma_r\!\left(S z^{(t-1)} + T h^{(t)} + a\right)$$
+$$\widehat{y}^{(t)} = \sigma_o\!\left(V z^{(t)} + c\right)$$
+
+**Other depth strategies:** stacked hidden/cell states, MLPs for inter-layer connections.
+
+
+## Key Intuitions Summary
+
+| Concept | Why It Matters |
+|---|---|
+| Parameter sharing in time | Handles variable-length sequences; generalizes across positions |
+| Hidden state | Provides memory — predictions can depend on the full history |
+| Gating | Controls information flow to mitigate vanishing/exploding gradients |
+| Cell state (LSTM) | Provides a "gradient highway" for long-range dependencies |
+| BPTT | Standard backprop applied to unrolled computational graph |
+
+---
+
+# Lecture 6 — Regularization
+
+## 1. Regularization — Core Idea
+
+> "Any modification we make to a learning algorithm that is intended to **reduce generalization error** but not its training error."
+
+- Trade **some bias** to lower **variance**
+- Modifies empirical risk minimization (ERM):
+
+$$\tilde{R}(\boldsymbol{\theta}; X, \mathbf{y}) = R(\boldsymbol{\theta}; X, \mathbf{y}) + \alpha\,\Omega(\boldsymbol{\theta})$$
+
+| Symbol | Meaning |
+|--------|---------|
+| $\Omega(\boldsymbol{\theta})$ | Regularizer |
+| $\alpha \geq 0$ | Regularization strength |
+
+## 2. $L^2$ Regularization (Weight Decay)
+
+$$\Omega(\boldsymbol{\theta}) = \frac{1}{2}\|\boldsymbol{\theta}\|^2 = \frac{1}{2}\sum_i \theta_i^2$$
+
+$$\tilde{R}(\boldsymbol{\theta}) = R(\boldsymbol{\theta}) + \frac{1}{2}\alpha\|\boldsymbol{\theta}\|^2$$
+
+### Ridge Regression (linear model)
+
+$$\hat{\mathbf{w}} = (X^TX + \alpha I)^{-1}X^T\mathbf{y}$$
+
+### Effect via Eigendecomposition
+
+Let $H = X^TX$ with eigenvectors $\mathbf{u}_i$ and eigenvalues $\lambda_i$. Expand $X^T\mathbf{y} = \sum_i \beta_i \mathbf{u}_i$:
+
+| | Solution |
+|--|--|
+| Unregularized | $\hat{\mathbf{w}} = \sum_i \dfrac{\beta_i}{\lambda_i}\mathbf{u}_i$ |
+| $L^2$-Regularized | $\hat{\mathbf{w}} = \sum_i \dfrac{\beta_i}{\lambda_i + \alpha}\mathbf{u}_i$ |
+
+- If $\lambda_i \gg \alpha$: almost **no change**
+- If $\lambda_i \ll \alpha$: data influence **removed** in that direction
+- **Key insight:** regularization suppresses directions of small variance in the data
+
+### Weight Decay Interpretation (GD)
+
+$$\boldsymbol{\theta}_{k+1} = \boldsymbol{\theta}_k - \epsilon\nabla R(\boldsymbol{\theta}_k) - \underbrace{\epsilon\alpha\boldsymbol{\theta}_k}_{\text{decay}}$$
+
+If $R = \text{const}$: $\;\boldsymbol{\theta}_{k+1} = (1 - \epsilon\alpha)\boldsymbol{\theta}_k$
+
+### Bayesian Interpretation
+$L^2$ ↔ **Gaussian prior**: $p(\boldsymbol{\theta}) \propto \exp(-\alpha\|\boldsymbol{\theta}\|^2/2)$
+
+## 3. $L^1$ Regularization (LASSO)
+
+$$\Omega(\boldsymbol{\theta}) = \|\boldsymbol{\theta}\|_1 = \sum_i |\theta_i|$$
+
+### Solution (diagonal quadratic loss)
+
+$$\hat{\theta}_i = \begin{cases} \theta_i^* - \text{Sign}(\theta_i^*)\dfrac{\alpha}{\lambda_i} & |\theta_i^*| > \dfrac{\alpha}{\lambda_i} \\ 0 & |\theta_i^*| \leq \dfrac{\alpha}{\lambda_i} \end{cases}$$
+
+- **Sparsity-inducing**: small weights are set to **exactly 0**
+- Useful for **feature selection**
+
+### Bayesian Interpretation
+$L^1$ ↔ **Laplace prior**: $p(\boldsymbol{\theta}) \propto \exp(-\alpha\|\boldsymbol{\theta}\|_1)$
+
+## 4. $L^1$ vs $L^2$ Comparison
+
+| Property | $L^2$ | $L^1$ |
+|----------|-------|-------|
+| Effect | Shrinks weights proportionally | Sets small weights to **zero** |
+| Sparsity | No | **Yes** |
+| Feature selection | No | **Yes** |
+| Prior | Gaussian | Laplace |
+| Name | Ridge / Weight Decay | LASSO |
+| Best when | All features relevant, correlated | Few features relevant |
+
+> **Elastic Net** = combines both $L^1$ and $L^2$
+
+### Neural Network Notes
+- Regularize **weights** $W$ only, **not biases** $\mathbf{b}$ (TensorFlow default)
+- Can use different $\alpha$ per layer
+
+### L1 vs L2 Geometry
+
+| | $L^2$ (Ridge) | $L^1$ (LASSO) |
+|---|---|---|
+| Shape | Smooth ball — no corners | Diamond — corners on axes |
+| Effect | Shrinks weights proportionally | Sets small weights to exactly zero |
+| Sparsity | No | Yes |
+| Prior | Gaussian | Laplace |
+
+**Why $L^1$ produces sparsity:**
+Loss contours intersecting the $L^1$ diamond almost always hit a **corner first**
+— corners sit exactly on the axes, forcing some weights to exactly zero.
+$L^2$'s smooth ball has no corners — contours intersect at a point where all 
+weights are nonzero, just shrunk.
+
+## 5. Early Stopping
+
+Monitor **validation loss**; stop when it stops improving.
+
+**Algorithm (patience $p$):** Every $n$ steps, compute validation error. If improved → save $\boldsymbol{\theta}^*$, reset counter. Else → increment counter. Stop when counter $= p$.
+
+### Variants
+
+| Strategy | Description |
+|----------|-------------|
+| Variant I | Find optimal $\tau$ on subtrain/valid split → retrain on full data for $\tau$ steps |
+| Variant II | Use early stopping loss value $\epsilon$ as stopping criterion on full data |
+
+### Equivalence to $L^2$ Regularization
+
+For a quadratic loss $R(\theta) = \frac{1}{2}\lambda(\theta - \theta^*)^2$, GD gives:
+
+$$\theta_k = (1-\epsilon\lambda)^k\theta_0 + \left(1 - (1-\epsilon\lambda)^k\right)\theta^*$$
+
+Early stopping at $\tau$ is a **weighted interpolation** between $\theta_0$ and is **equivalent** to $L^2$ regularization with:
+
+$$\alpha = \frac{\lambda(1-\epsilon\lambda)^\tau}{1-(1-\epsilon\lambda)^\tau}$$
+
+| Method | Implicit Penalty | Pulls Toward |
+|---|---|---|
+| Early stopping | $\frac{1}{2}\alpha(\theta - \theta_0)^2$ — distance from init | Initialization $\theta_0$ |
+| $L^2$ regularization | $\frac{1}{2}\alpha\|\theta\|^2$ — magnitude of weights | Origin $\mathbf{0}$ |
+
+> They are equivalent **only when** $\theta_0 = \mathbf{0}$ (zero initialization).
+> Otherwise they differ in what they penalize.
+
+- The implicit penalty is: $\;\frac{1}{2}\alpha(\theta - \theta_0)^2$ — distance from **initialization**, not origin.
+- **Advantage:** Implicit regularization — no need to tune $\alpha$!
+
+## 6. Adding Noise
+
+> Rationale: model should be **robust to noise**
+
+### Noise on Inputs
+
+- Heuristic prior: output is insensitive to small input perturbations
+- For linear regression with $\tilde{X} = X + Z$, $\mathbf{z}^{(i)} \sim \mathcal{N}(0, \delta I)$:
+
+$$\mathbb{E}_Z\tilde{R}(\mathbf{w}) = R(\mathbf{w}) + \frac{1}{2}\delta N\|\mathbf{w}\|^2$$
+
+→ Equivalent to **$L^2$ regularization** (heuristically true for nonlinear models too)
+
+> Inductive bias is essentially the set of assumptions a model makes about the data in order to generalize beyond what it has seen during training.
+
+> **Inductive bias:** $f^*$ should be smooth and insensitive to small 
+> input perturbations — robustness is baked into training.
+
+### Noise on Outputs — Label Smoothing
+
+For $K$-class one-hot labels, replace:
+
+$$1 \mapsto 1 - \alpha, \quad 0 \mapsto \frac{\alpha}{K-1}$$
+
+Prevents the model from being overconfident.
+
+> **Inductive bias:** No class should ever be predicted with absolute 
+> certainty — the model should remain calibrated.
+
+### Noise on Weights
+
+Add perturbation $\delta\boldsymbol{\phi} \sim \mathcal{N}(0, I)$ to $\boldsymbol{\theta}$ during training:
+
+$$\mathbb{E}_\phi\tilde{R}(\boldsymbol{\theta}) = \frac{1}{2}(f(\mathbf{x},\boldsymbol{\theta}) - y)^2 + \frac{m\delta^2}{2}\|\nabla_\theta f(\mathbf{x},\boldsymbol{\theta})\|^2 + \cdots$$
+
+→ Penalizes sensitivity of predictions to weight perturbations
+
+## Summary Table
+
+| Method | Category | Key Effect | Equivalent To |
+|--------|----------|-----------|---------------|
+| $L^2$ (Ridge) | Training | Shrink weights; suppress low-variance directions | Gaussian prior |
+| $L^1$ (LASSO) | Training | Sparse weights; feature selection | Laplace prior |
+| Early Stopping | Training | Constrain distance from $\boldsymbol{\theta}_0$ | $L^2$ (linear case) |
+| Input Noise | Training/Data | Robustness to input perturbations | $L^2$ (linear case) |
+| Label Smoothing | Data | Prevent overconfidence | Output noise |
+| Weight Noise | Training | Penalize weight sensitivity | — |
+
+> **Note:** These methods are equivalent for linear models under specific assumptions, but **not equivalent** for nonlinear neural networks in general.
+
+---
+
+# Lecture 7 — Model, Data & Training Techniques
+
+## 1. Model Ensembling
+
+### Bagging (Bootstrap Aggregating)
+Train $m$ models $f_1, \ldots, f_m$ on **random subsamples** of training data, then aggregate:
+
+- **Regression:** $\bar{f}(x) = \dfrac{1}{m} \sum_{j=1}^{m} f_j(x)$
+- **Classification:** $\bar{f}(x) = \text{Mode}\{f_j(x) : j = 1, \ldots, m\}$
+
+**Why it works:** If each model has noise $\epsilon_i$ with $\mathbb{E}\epsilon_i = 0$, $\mathbb{E}\epsilon_i^2 = \sigma^2$, and errors are uncorrelated, then:
+$$\bar{E}(x) = \frac{1}{m} E(x)$$
+The ensemble error is $1/m$ of the individual model error. *(Key unrealistic assumption: uncorrelated errors)*
+
+### Dropout
+Efficient **approximation** of model ensembling — avoids storing $m$ separate models.
+
+**Key idea:** Stochastic approximation $\dfrac{1}{m}\sum_i f_i = \mathbb{E}_\gamma f_\gamma$, 
+sample $\gamma \sim \text{Uniform}\{1,\ldots,m\}$ each SGD step.
+
+**Mechanism:** Apply a random binary mask $\boldsymbol{\mu}$ element-wise:
+$$f(\mathbf{x}; W, \mathbf{b}, \boldsymbol{\mu}) = \sigma\!\left(W(\boldsymbol{\mu} \circ \mathbf{x}) + \mathbf{b}\right)$$
+
+- Each coordinate of $\boldsymbol{\mu}$ is drawn iid: $P(\mu_i = 1) = p$ (keep probability), 
+  $P(\mu_i = 0) = 1-p$ (drop rate)
+- Since $\mathbb{E}[\boldsymbol{\mu}] = p\mathbf{1}$, weights are effectively shrunk by $p$
+- **Ensemble size:** $2^m$ distinct subnetworks (share parameters $\boldsymbol{\theta}$)
+
+**Why $2^m$ subnetworks?** Each of the $m$ neurons can independently be kept or 
+dropped → $2^m$ possible binary masks $\boldsymbol{\mu}$.
+
+**Weight Scaling Inference Rule:** At test time, set $\boldsymbol{\mu} = \mathbf{1}$ 
+and replace $W \mapsto p \times W$.
+
+**Why scaling is necessary:** During training, each neuron is active with probability 
+$p$, so the expected input to the next layer is scaled by $p$. At inference with all 
+neurons active, inputs are suddenly larger by $\frac{1}{p}$ — breaking the statistics 
+the network was trained on. Multiplying weights by $p$ restores the same expected 
+activation magnitude.
+
+**Regularization connection:** For linear regression, dropout $\equiv$ weighted 
+$L^2$ regularization:
+$$\tilde{R}(\mathbf{w}) = \frac{1}{2}\|X\mathbf{w} - \mathbf{y}\|^2 + \frac{1}{2}\mathbf{w}^T Q(X, p)\mathbf{w}$$
+
+## 2. Batch Normalization (BN)
+
+### Motivation
+In deep networks, weight magnitudes across layers affect gradient descent stability. 
+The $\mathcal{O}(\epsilon^2)$ terms in the loss expansion become large when layer 
+weight products are large, making learning rate selection very hard.
+
+**Goal:** Normalize values at each layer so statistics are consistent across layers.
+
+### BN Layer Definition
+Given batch $H = \{\mathbf{h}^{(1)}, \ldots, \mathbf{h}^{(B)}\}$:
+
+$$\text{BN}(H;\boldsymbol{\gamma},\boldsymbol{\beta})^{(i)} = \boldsymbol{\gamma} \circ \left(\frac{\mathbf{h}^{(i)} - \boldsymbol{\mu}}{\boldsymbol{\sigma}}\right) + \boldsymbol{\beta}$$
+
+where:
+$$\boldsymbol{\mu} = \frac{1}{B}\sum_j \mathbf{h}^{(j)}, \qquad \boldsymbol{\sigma} = \sqrt{\frac{1}{B}\sum_j (\mathbf{h}^{(j)} - \boldsymbol{\mu})^2}$$
+
+$\boldsymbol{\gamma}, \boldsymbol{\beta} \in \mathbb{R}^d$ are **learnable** scale and shift parameters.
+
+### Two Steps
+
+| Step | Formula | Purpose |
+|------|---------|---------|
+| Normalize | $\tilde{\mathbf{h}}^{(i)} = \dfrac{\mathbf{h}^{(i)} - \boldsymbol{\mu}}{\boldsymbol{\sigma}}$ | Zero mean, unit std within batch |
+| Rescale | $\hat{\mathbf{h}}^{(i)} = \boldsymbol{\gamma} \circ \tilde{\mathbf{h}}^{(i)} + \boldsymbol{\beta}$ | Restore expressive power |
+
+**Why both steps are necessary:**
+- **Normalization** controls the *scale of computation* — stabilizes training by 
+  ensuring consistent statistics across layers regardless of upstream weight magnitudes
+- **Rescaling** restores *representational freedom* — forcing unit statistics is too 
+  restrictive; the optimal representation for a layer may genuinely need a different 
+  mean or variance. $\boldsymbol{\gamma}$ and $\boldsymbol{\beta}$ allow the network 
+  to learn any mean and variance, but in a stable controlled way
+
+### Usage in FC Networks
+$$H_k' = H_k W + \mathbf{b} \;\longrightarrow\; \hat{H}_k = \text{BN}(H_k'; \boldsymbol{\gamma}, \boldsymbol{\beta}) \;\longrightarrow\; H_{k+1} = \text{ReLU}(\hat{H}_k)$$
+
+### Training vs Inference
+- **Training:** Use batch statistics $\boldsymbol{\mu}, \boldsymbol{\sigma}$
+- **Inference:** Use **moving averages** of $\boldsymbol{\mu}, \boldsymbol{\sigma}$ 
+  accumulated during training
+
+### Notes
+- BN **couples different samples** in a batch — first architecture to do so
+- For CNNs: share $\boldsymbol{\beta}, \boldsymbol{\gamma}$ per channel (length = 
+  #channels), applied across all spatial positions
+- Bias $\mathbf{b}$ is redundant when BN is applied: $\text{BN}(XW + b) = \text{BN}(XW)$ 
+  (absorbed into $\boldsymbol{\beta}$)
+
+## 3. Data Augmentation
+
+### Motivation — Generalization Gap
+Statistical learning theory gives:
+$$\left|R_{\text{emp}}^{(N)}(\boldsymbol{\theta}) - R_{\text{pop}}(\boldsymbol{\theta})\right| \leq \frac{\text{Complexity of Model}}{N}$$
+
+Two ways to reduce: **(1) regularization** (reduce complexity), **(2) data augmentation** 
+(increase $N$).
+
+### Principle
+Given augmentation $\mathbf{x} \mapsto g(\mathbf{x}; \boldsymbol{\xi})$:
+$$f^*\!\left(g(\mathbf{x}; \boldsymbol{\xi})\right) \approx f^*(\mathbf{x})$$
+
+Data augmentation encodes **prior knowledge** (inductive bias): the oracle $f^*$ is 
+assumed invariant under $g(\cdot;\boldsymbol{\xi})$.
+
+> **Inductive bias:** You are asserting that the label should be preserved under 
+> the transformation. Always ask: *"Does this transformation change the label?"* 
+> If yes — don't use it.
+
+| Augmentation | Implicit Assumption |
+|---|---|
+| Random translations | $f^*$ is translation-invariant |
+| Random rotations | $f^*$ is rotation-invariant |
+| Random contrast/saturation | $f^*$ is lighting-invariant |
+
+> ⚠️ **Caution:** Arbitrary rotations break MNIST labels (e.g., 6 → 9). 
+> Must respect problem structure.
+
+## 4. Learning Rate Decay
+
+### Problem with Constant Learning Rate in SGD
+For a quadratic problem:
+$$\mathbb{E}R(\theta_k) \approx \underbrace{R(\theta_0)(1-\epsilon)^{2k}}_{\text{exponential convergence}} + \underbrace{\epsilon\!\left(1-(1-\epsilon)^{2k}\right)}_{\mathcal{O}(\epsilon)\text{ fluctuations}}$$
+
+A constant $\epsilon$ leaves residual noise — near the minimum, the true gradient 
+is small but stochastic noise isn't, causing the update to keep **overshooting** 
+around the minimum rather than settling.
+
+Solution: use a **decaying** schedule $\epsilon = \epsilon_k$.
+
+### Theoretical Sufficient Conditions (Robbins-Monro)
+$$\sum_{k=0}^{\infty} \epsilon_k = +\infty \quad \text{and} \quad \sum_{k=0}^{\infty} \epsilon_k^2 < +\infty$$
+
+| Condition | Purpose | What breaks without it |
+|---|---|---|
+| $\sum \epsilon_k = \infty$ | Steps large enough to reach minimum | Decay too fast → freeze before converging |
+| $\sum \epsilon_k^2 < \infty$ | Steps small enough to kill noise | Decay too slow → residual noise never dies |
+
+> Together: decay **slow enough** to make progress, **fast enough** to eliminate noise.
+
+Example: $\epsilon_k = \dfrac{a}{1+bk}$ ($\mathcal{O}(k^{-1})$ decay). Satisfies both 
+conditions but rarely used in practice — slows convergence.
+
+### Exponential Schedule (Common in Practice)
+Parameters: initial rate $\epsilon_0$, decay interval $k_0$, decay ratio $\gamma \in (0,1)$:
+$$\epsilon_k = \epsilon_0 \, \gamma^{\lfloor k/k_0 \rfloor}$$
+
+## 5. Adversarial Examples & Adversarial Training
+
+### Adversarial Example
+For a trained classifier $\hat{f}$ with parameters $\hat{\boldsymbol{\theta}}$, 
+an adversarial example solves:
+$$\mathbf{x}' = \arg\max_{\mathbf{z},\, \|\mathbf{z}-\mathbf{x}\| \leq \delta} L\!\left(\hat{y}(\mathbf{z};\hat{\boldsymbol{\theta}}), y\right)$$
+
+Finds the **worst-case small perturbation** that maximally increases loss — 
+imperceptible to humans yet fools the model.
+
+### Adversarial Training (Mini-Max)
+$$\min_{\boldsymbol{\theta}} \frac{1}{N} \sum_{i=1}^{N} \max_{\mathbf{z}_i:\, \|\mathbf{x}_i - \mathbf{z}_i\| \leq \delta} L\!\left(\hat{y}(\mathbf{z}_i; \boldsymbol{\theta}), y_i\right)$$
+
+**Inductive bias:** The decision boundary should be robust within an $\ell_\infty$ 
+ball of radius $\delta$ around every training point — not just correct on the 
+training points themselves. Forces the model's notion of similarity to align with 
+human perception.
+
+### FGSM Algorithm (Fast Gradient Sign Method)
+**Hyperparameters:** $\delta$ (adversarial budget), $J$ (inner steps), $\epsilon_1, \epsilon_2$ (learning rates)
+
+```
+For k = 0, 1, ... do:
+    z_0 = x
+    For j = 0, ..., J-1 do:
+        z_{j+1} = z_j + ε₂ · Sign(∇_z L(ŷ(z_j; θ_k), y))   ← ascent on input
+    θ_{k+1} = θ_k − ε₁ · ∇_θ L(ŷ(z_J; θ_k), y)              ← descent on params
+```
+
+**Effect:** Forces the model to be robust within an $\ell_\infty$ ball of radius $\delta$ around each training point.
+
+## Summary Table
+
+| Technique | Category | What it does |
+|-----------|----------|-------------|
+| Bagging | Model/Training | Averages multiple models to reduce variance |
+| Dropout | Model/Training | Stochastic ensemble via random masking; implicit $L^2$ reg |
+| Batch Normalization | Model | Normalizes layer activations; stabilizes training |
+| Data Augmentation | Data | Expands dataset using label-preserving transforms |
+| Learning Rate Decay | Training | Reduces SGD noise as training converges |
+| Adversarial Training | Training | Trains on worst-case perturbations for robustness |
+
+---
+
+# Lecture 8: Unsupervised & Semi-Supervised Learning
+
+## 1. Learning Paradigms
+
+| Paradigm | Data | Goal |
+|---|---|---|
+| **Supervised** | Labeled $\{(\mathbf{x}^{(i)}, y^{(i)})\}$ | Learn $\hat{f} \approx f^*$ |
+| **Unsupervised** | Unlabeled $\{\mathbf{x}^{(i)}\}$ | Learn task-agnostic patterns |
+| **Semi-supervised** | Labeled $\mathcal{D}_L$ + Unlabeled $\mathcal{D}_U$ | Improve prediction using both |
+
+### Unsupervised Learning Tasks
+- **Dimensionality reduction** — compress high-dim data to lower-dim
+- **Generative models** — learn $\hat{p}(\mathbf{x}) \approx p(\mathbf{x})$, enable sampling
+- **Clustering** — group similar data points
+- **Density estimation** — estimate the data distribution
+
+## 2. Principal Component Analysis (PCA)
+
+**Inputs:** Data matrix $X \in \mathbb{R}^{N \times d}$ (mean-centered)
+
+**Covariance matrix:**
+$$S = \frac{1}{N} X^T X$$
+
+$S_{ij}$ measures how much feature $i$ and feature $j$ vary together. Diagonal 
+entries $S_{ii} = \lambda_i$ are the **variances** along each principal direction.
+
+**Eigenvalue decomposition:**
+$$S = U \Lambda U^T, \quad \Lambda = \text{diag}\{\lambda_1, \lambda_2, \ldots, \lambda_d\}, \quad \lambda_1 \geq \lambda_2 \geq \cdots$$
+
+- $U = [\mathbf{u}_1, \ldots, \mathbf{u}_d]$ — eigenvectors, the **principal directions**
+- $\lambda_i$ — variance along each principal direction
+
+**PC scores (full):**
+$$Z = XU$$
+
+**Reverse transform:**
+$$X = ZU^T$$
+
+### PCA as Compression
+Keep only first $m$ principal components ($m \ll d$):
+
+$$Z_m = XU_m, \quad U_m \in \mathbb{R}^{d \times m}$$
+
+**Reconstruction:**
+$$X \approx X_m = Z_m U_m^T$$
+
+**Reconstruction error:**
+$$\frac{1}{N}\sum_{i=1}^{N} \|\mathbf{x}^{(i)} - \mathbf{x}_m^{(i)}\|^2 = \sum_{j=m+1}^{d} \lambda_j$$
+
+> Encoder: $X \mapsto XU_m$ | Decoder: $Z \mapsto ZU_m^T$
+
+### Why Minimizing Reconstruction Error = Maximizing Variance
+
+Reconstruction error = sum of **discarded** eigenvalues $\sum_{j=m+1}^{d}\lambda_j$.
+Minimizing this is equivalent to maximizing retained variance $\sum_{j=1}^{m}\lambda_j$ 
+— two sides of the same objective.
+
+> **Intuition:** Data shaped like a flat ellipse — long axis has high variance 
+> ($\lambda_1$ large), short axis has low variance ($\lambda_2$ small). PCA keeps 
+> the long axis and discards the short one, losing minimal information.
+
+### How Many Components to Keep?
+
+Use **explained variance ratio** — not just positive eigenvalues:
+$$\text{Explained variance} = \frac{\sum_{j=1}^{m}\lambda_j}{\sum_{j=1}^{d}\lambda_j}$$
+
+Common practice: keep enough components to explain **95% of total variance**. 
+Small $\lambda_j$ means that direction has little variance — discarding it loses 
+minimal information.
+
+## 3. Autoencoders (AE)
+
+Autoencoders generalize PCA to **nonlinear** compression.
+
+| | PCA | Autoencoder |
+|---|---|---|
+| Encoder | $\mathbf{z} = U_m^T \mathbf{x}$ | $\mathbf{z} = f(\mathbf{x})$ |
+| Decoder | $\mathbf{x}' = U_m \mathbf{z}$ | $\mathbf{x}' = g(\mathbf{z})$ |
+
+- $f: \mathbb{R}^d \to \mathbb{R}^m$ (encoder), $g: \mathbb{R}^m \to \mathbb{R}^d$ (decoder)
+- $\mathbb{R}^m$ = **latent space**; $\mathbf{z} = f(\mathbf{x})$ = **latent variable**
+
+**Training objective** (self-supervised):
+$$\min_{f,g} \; L\!\left(\mathbf{x},\, g(f(\mathbf{x}))\right)$$
+The label *is* the input.
+
+### The Identity Problem
+An overcomplete autoencoder ($m \geq d$) can trivially learn $f(\mathbf{x}) = \mathbf{x}$,
+$g(\mathbf{z}) = \mathbf{z}$ — perfect reconstruction but **nothing useful learned**.
+Each regularized variant prevents this differently:
+
+### Types of Autoencoders
+
+| Type | Condition | Regularizer | Use | Inductive Bias |
+|---|---|---|---|---|
+| **Undercomplete** | $m \ll d$ | None — bottleneck suffices | Compression, feature extraction | Bottleneck forces learning compact representations |
+| **Overcomplete / Regularized** | $m \geq d$ | Requires $\Omega$ | Needs regularizer to prevent identity | Without $\Omega$, trivially learns identity |
+| **Denoising** | Train on $\tilde{\mathbf{x}}$ | Noisy input, clean target | Noise removal | True features survive corruption; identity shortcut fails since $\tilde{\mathbf{x}} \neq \mathbf{x}$ |
+| **Sparse** | $m \geq d$ | $\Omega = \alpha\|f(\mathbf{x})\|_1$ | Sparse latent features, feature selection | Few neurons fire per input — each neuron is a specialist detector |
+| **Contractive** | $m \geq d$ | $\Omega = \alpha\|\nabla f(\mathbf{x})\|_2^2$ | Stable representations | Small input changes → small latent changes; penalizes sensitivity |
+
+**Why identity fails for each:**
+- **Denoising:** $g(f(\tilde{\mathbf{x}})) = \tilde{\mathbf{x}} \neq \mathbf{x}$ — 
+  passing noise through unchanged gives high loss
+- **Sparse:** Identity activates all neurons — $L^1$ penalty makes this expensive
+- **Contractive:** Identity has Jacobian $= I$, giving large penalty 
+  $\|\nabla f\|^2 = d$ for high-dimensional data
+
+**Regularized loss:**
+$$L\!\left(\mathbf{x}, g(f(\mathbf{x}))\right) + \Omega(\mathbf{x}, f, g)$$
+
+**Denoising loss:**
+$$L\!\left(\mathbf{x}, g(f(\tilde{\mathbf{x}}))\right) \implies \mathbf{x} \approx g(f(\tilde{\mathbf{x}}))$$
+
+**Seq-to-Seq AE:** Both encoder and decoder are RNNs → handles variable-length inputs.
+
+## 4. Semi-Supervised Learning
+
+**Data:**
+$$\mathcal{D}_L = \{(\mathbf{x}^{(i)}, y^{(i)}): i=1,\ldots,N_L\}, \quad \mathcal{D}_U = \{\tilde{\mathbf{x}}^{(i)}: i=1,\ldots,N_U\}, \quad N_U \gg N_L$$
+
+### Problem Types
+- **Transductive:** Label the unlabeled points in $\mathcal{D}_U$
+- **Inductive:** Learn $f^*$ for predictions on unseen inputs
+
+### Key Assumptions
+| Assumption | Description |
+|---|---|
+| **Continuity** | Nearby inputs share the same label — justifies building similarity graph |
+| **Cluster** | Clusters share the same label — labels flow within clusters, stop at boundaries |
+| **Manifold** | Data lies on a low-dimensional manifold — labels propagate along manifold, not through empty space |
+
+### Self-Training Algorithm
+1. Train $\hat{f}$ on $\mathcal{D}_L$
+2. For $\tilde{\mathbf{x}} \in \mathcal{D}_U$, predict $y = \hat{f}(\tilde{\mathbf{x}})$
+3. Add $(\tilde{\mathbf{x}}, y)$ to $\mathcal{D}_L$; repeat
+
+**Variants:** add most confident predictions only, weight by confidence.
+
+| Pros | Cons |
+|---|---|
+| Simple; model-agnostic | Early errors compound |
+| General meta-algorithm | Few theoretical guarantees |
+
+### Label Propagation
+
+Spreads labels through the dataset like **ink diffusing through water** — 
+exploits all three assumptions simultaneously.
+
+**Step 1 — Build similarity graph** *(continuity assumption)*
+
+Connect every pair of points with edge weight:
+$$w_{ij} = \exp\!\left(-\frac{\|\mathbf{x}_i - \mathbf{x}_j\|^2}{2\sigma^2}\right)$$
+
+Close points → high weight; distant points → near-zero weight.
+
+**Step 2 — Initialize labels**
+- Labeled points: fixed to known labels (act as **anchors**)
+- Unlabeled points: initialized arbitrarily
+
+**Step 3 — Iterative propagation** *(cluster + manifold assumption)*
+
+Each unlabeled node takes weighted average of neighbor labels:
+$$y_i \leftarrow \frac{\sum_j w_{ij} y_j}{\sum_j w_{ij}}$$
+
+Labels flow freely **within** dense clusters but struggle to cross sparse 
+regions — respecting cluster boundaries.
+
+**Step 4 — Convergence:** Stop when labels stabilize.
+
+**Concrete example:**
+```
+🐱A — 1 — 2 — 3 — 4 — 5 — 🐶B
+
+After propagation:
+1, 2 → cat (closer to A)
+4, 5 → dog (closer to B)
+3 → depends on edge weights (decision boundary)
+```
+
+> Labels propagate **along the manifold** (chain of connected points), 
+> not through empty Euclidean space — two points far apart in raw space 
+> but connected along the manifold share the same label.
+
+**Why it can fail:** Wrong $\sigma$ → poor graph construction → early 
+errors spread through entire graph.
+
+## 5. Learning Across Tasks
+
+### Multi-Task Learning
+Train one model on multiple tasks simultaneously; shared hidden layers learn 
+common representations.
+
+**Architecture options:**
+- Common inputs → shared layers → task-specific outputs $(y^{(1)}, y^{(2)})$
+- Multiple inputs $(x^{(1)}, x^{(2)}, x^{(3)})$ → shared layer → common output $y$
+
+### Transfer Learning
+Data across tasks is **similar**; tasks may differ.
+
+**Approach — Pre-training:**
+$$\text{Large Dataset 1} \xrightarrow{\text{train}} \text{Model 1} \xrightarrow{\text{init}} \text{Model 2} \xleftarrow{\text{train}} \text{Small Dataset 2}$$
+
+- Warm-start Model 2 with weights from Model 1
+- Fine-tune all or some layers on Dataset 2
+- Unsupervised pre-training (e.g. autoencoder features) is also valid
+
+### Domain Adaptation
+Same task, **different data distributions** (source vs target domain).
+
+| Domain | Data | Labels |
+|---|---|---|
+| Source | $\mathcal{D}_S$ | Full labels |
+| Target | $\mathcal{D}_T$ | None / few |
+
+**Algorithms:**
+- Label propagation from few target labels
+- Learn a **common representation** via autoencoders or adversarial methods
+- Learn **transport maps** to match source → target distribution
+
+## 6. Why These Work: Representation Learning
+
+> All methods above succeed by learning a **compact, task-relevant representation** 
+> of the data — either through dimensionality reduction (PCA/AE), graph structure 
+> (label propagation), or shared features (transfer learning).
+
+---
+
+# Lecture 9: Generative Models & VAEs
+
+## 1. Discriminative vs Generative Models
+
+| | Discriminative | Generative |
+|---|---|---|
+| **Goal** | Learn $f^*(\mathbf{x})$ (decision boundary) | Learn $p^*(\mathbf{x})$ (data distribution) |
+| **Output** | Labels / predictions | New samples $\tilde{\mathbf{x}} \sim p^*$ |
+
+> **Intuition:** Discriminative models learn to *classify* — generative models 
+> learn to *create*. A discriminative model for faces learns "is this a face?"; 
+> a generative model learns "what does a face look like?"
+
+
+## 2. Density Estimation vs Generative Models
+
+- **Density Estimation**: Find $\hat{p} \approx p^*$ — may not be easily samplable.
+- **Generative Models**: Sample $\tilde{\mathbf{x}} \sim p^*$ approximately.
+
+> The distinction matters: you can estimate a distribution without being able 
+> to efficiently draw samples from it.
+
+## 3. Gaussian Mixture Models (GMM)
+
+$$p_{\boldsymbol{\theta}}(\mathbf{x}) = \sum_j \alpha_j \, p_{\boldsymbol{\mu}_j, \Sigma_j}(\mathbf{x}), \quad \alpha_j \geq 0, \quad \sum_j \alpha_j = 1$$
+
+**Sampling**: (1) Sample index $i$ from $\{\alpha_j\}$; (2) Sample from 
+$p_{\boldsymbol{\mu}_i, \Sigma_i}$.
+
+**Limitations**: Poor for high-dimensional data; $K$ is hard to tune; cannot 
+leverage domain knowledge (e.g., CNNs).
+
+> **Intuition:** GMM assumes data comes from $K$ Gaussian clusters. Simple and 
+> interpretable, but breaks down for complex high-dimensional data like images.
+
+## 4. Maximum Likelihood Estimation (MLE)
+
+Given dataset $\mathcal{D} = \{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(N)}\}$ 
+with $\mathbf{x}^{(i)} \sim p^*$, find parameters that make the observed data 
+**most probable**:
+
+$$\hat{\boldsymbol{\theta}} = \arg\max_{\boldsymbol{\theta}} \sum_i \log p_{\boldsymbol{\theta}}(\mathbf{x}^{(i)})$$
+
+> We use log-likelihood instead of likelihood for numerical stability — 
+> products of small probabilities underflow; sums of logs don't.
+
+**Gaussian MLE** ($\boldsymbol{\theta} = (\mu, \sigma)$):
+
+$$\hat{\mu} = \frac{1}{N}\sum_{i=1}^N x^{(i)}, \qquad \hat{\sigma}^2 = \frac{1}{N}\sum_{i=1}^N (x^{(i)} - \hat{\mu})^2$$
+
+## 5. Latent Generative Models
+
+Real-world data is complex — rather than modeling $p(\mathbf{x})$ directly, 
+introduce a **latent variable** $\mathbf{z}$ that explains the underlying 
+structure:
+
+$$p_{\boldsymbol{\theta}}(\mathbf{x}) = \int p_{\boldsymbol{\theta}}(\mathbf{x}|\mathbf{z})\, p_{\boldsymbol{\theta}}(\mathbf{z})\, d\mathbf{z}$$
+
+- $\mathbf{z}$: latent variable — compact representation of hidden structure
+- $p_{\boldsymbol{\theta}}(\mathbf{z})$: prior — what we assume about latent space 
+  before seeing data (typically $\mathcal{N}(\mathbf{0}, I)$)
+- $p_{\boldsymbol{\theta}}(\mathbf{x}|\mathbf{z})$: decoder — given latent code, 
+  generate data
+
+> **Intuition:** For face generation, $\mathbf{z}$ might encode "smile intensity", 
+> "hair color", "age" — the decoder then renders a face from these attributes.
+
+## 6. Variational Autoencoder (VAE)
+
+### AE vs VAE — The Key Difference
+
+| Component | AE | VAE |
+|---|---|---|
+| **Encoder** | $\mathbf{z} = f_{\boldsymbol{\phi}}(\mathbf{x})$ — single point | $\mathbf{z} \sim q_{\boldsymbol{\phi}}(\mathbf{z}\|\mathbf{x})$ — distribution |
+| **Decoder** | $\mathbf{x}' = g_{\boldsymbol{\theta}}(\mathbf{z})$ | $\mathbf{x}' \sim p_{\boldsymbol{\theta}}(\mathbf{x}\|\mathbf{z})$ |
+
+**Why distributions instead of points?**
+
+A regular AE maps each input to a **single point** in latent space — no 
+guarantee of structure or continuity. Points between learned latent vectors 
+may decode to **garbage** because nothing was trained there.
+
+VAE forces the latent space to be a **continuous, structured Gaussian** — 
+you can sample *anywhere* in latent space and decode something meaningful.
+
+**The posterior problem:**
+
+The true posterior $p_{\boldsymbol{\theta}}(\mathbf{z}|\mathbf{x})$ is 
+**intractable** (requires integrating over all $\mathbf{z}$). Solution: 
+approximate it with a learned distribution:
+$$q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x}) \approx p_{\boldsymbol{\theta}}(\mathbf{z}|\mathbf{x})$$
+
+
+## 7. KL Divergence
+
+Measures how different two distributions are:
+
+$$D_{KL}(p \| q) = \int p(\mathbf{x}) \log \frac{p(\mathbf{x})}{q(\mathbf{x})}\, d\mathbf{x} = \mathbb{E}_{p(\mathbf{x})}\!\left[\log \frac{p(\mathbf{x})}{q(\mathbf{x})}\right]$$
+
+**Properties:**
+- $D_{KL}(p\|q) \geq 0$ — always non-negative
+- $D_{KL}(p\|q) = 0$ iff $p = q$ — zero only when distributions are identical
+- **Not symmetric**: $D_{KL}(p\|q) \neq D_{KL}(q\|p)$
+
+**Gaussian KL** ($p_{\boldsymbol{\theta}_1} = \mathcal{N}(\mu_1, \sigma_1^2)$, 
+$p_{\boldsymbol{\theta}_2} = \mathcal{N}(\mu_2, \sigma_2^2)$):
+
+$$D_{KL}(p_{\boldsymbol{\theta}_1} \| p_{\boldsymbol{\theta}_2}) = \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2}{2\sigma_2^2} - \frac{1}{2} + \frac{(\mu_1 - \mu_2)^2}{2\sigma_2^2}$$
+
+
+## 8. Monte-Carlo Estimation
+
+When an expectation is intractable analytically, approximate it by averaging 
+over samples:
+
+$$\mathbb{E}[f(\mathbf{x})] \approx \frac{1}{N}\sum_{i=1}^N f(\mathbf{x}^{(i)}), \quad \mathbf{x}^{(i)} \sim p \text{ i.i.d.}$$
+
+> Used in VAE training to approximate the ELBO expectation over $\mathbf{z}$.
+
+## 9. Evidence Lower Bound (ELBO)
+
+Since $\log p_{\boldsymbol{\theta}}(\mathbf{x})$ is intractable, we instead 
+maximize a **tractable lower bound**:
+
+$$\log p_{\boldsymbol{\theta}}(\mathbf{x}) = \underbrace{\mathbb{E}_{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})}\!\left[\log \frac{p_{\boldsymbol{\theta}}(\mathbf{x}, \mathbf{z})}{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})}\right]}_{L(\mathbf{x};\,\boldsymbol{\theta},\boldsymbol{\phi})\ \text{(ELBO)}} + \underbrace{D_{KL}\!\left(q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x}) \| p_{\boldsymbol{\theta}}(\mathbf{z}|\mathbf{x})\right)}_{\geq\, 0}$$
+
+Since KL $\geq 0$: $\;\log p_{\boldsymbol{\theta}}(\mathbf{x}) \geq L(\mathbf{x};\boldsymbol{\theta},\boldsymbol{\phi})$
+
+**Training objective**: $\max_{\boldsymbol{\theta},\boldsymbol{\phi}}\ L(\mathbf{x};\boldsymbol{\theta},\boldsymbol{\phi})$
+
+> **Why ELBO works:** Maximizing the ELBO simultaneously maximizes the 
+> log-likelihood AND minimizes the gap between $q_{\boldsymbol{\phi}}$ and 
+> the true posterior — killing two birds with one stone.
+
+**Multi-sample ELBO**:
+$$L(\mathcal{D};\boldsymbol{\theta},\boldsymbol{\phi}) = \frac{1}{N}\sum_{i=1}^N \mathbb{E}_{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x}^{(i)})}\!\left[\log \frac{p_{\boldsymbol{\theta}}(\mathbf{x}^{(i)}, \mathbf{z})}{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x}^{(i)})}\right]$$
+
+## 10. Reparameterization Trick
+
+**The problem:** Sampling $\mathbf{z} \sim q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})$ 
+directly is **not differentiable** — the sampling operation is a stochastic node 
+in the computational graph. Backprop cannot flow gradients through it since there 
+is no deterministic relationship between $\boldsymbol{\phi}$ and $\mathbf{z}$.
+
+**The fix:** Move the randomness outside the graph by rewriting as a 
+**deterministic transformation**:
+
+$$\mathbf{z} = g(\mathbf{u}, \boldsymbol{\phi}, \mathbf{x}), \quad \mathbf{u} \sim p_0(\mathbf{u}) \text{ (fixed, independent of } \boldsymbol{\phi})$$
+
+**Gaussian example**:
+$$\mathbf{z} = \boldsymbol{\mu} + \boldsymbol{\sigma} \circ \mathbf{u}, \quad \mathbf{u} \sim \mathcal{N}(\mathbf{0}, I)$$
+
+Now $\mathbf{u}$ is sampled from a **fixed distribution independent of 
+$\boldsymbol{\phi}$** — the path from $\boldsymbol{\phi}$ to $\mathbf{z}$ 
+is deterministic and differentiable:
+$$\nabla_{\boldsymbol{\phi}}\mathbf{z} = \nabla_{\boldsymbol{\phi}}(\boldsymbol{\mu} + \boldsymbol{\sigma} \circ \mathbf{u})$$
+
+**Enables gradient flow:**
+$$\nabla_{\boldsymbol{\phi}}\,\mathbb{E}_{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})}[f(\mathbf{z})] = \mathbb{E}_{p_0(\mathbf{u})}\!\left[\nabla_{\boldsymbol{\phi}} f(g(\mathbf{u}, \boldsymbol{\phi}, \mathbf{x}))\right]$$
+
+> **Analogy:** Instead of "sample a random number that depends on $\boldsymbol{\phi}$" 
+> → "sample a standard random number, then transform it using $\boldsymbol{\phi}$." 
+> Same result, but now $\boldsymbol{\phi}$ sits on a differentiable path.
+
+## 11. Neural Network Parameterization
+
+### Encoder — $q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})$ (Factorized Gaussian)
+
+Outputs the **mean and log-variance** of the latent distribution:
+$$(\boldsymbol{\mu},\, \log\boldsymbol{\sigma}) = \text{EncodingNN}(\mathbf{x};\boldsymbol{\phi})$$
+$$\mathbf{z} = \boldsymbol{\mu} + \boldsymbol{\sigma} \circ \mathbf{u}, \quad \mathbf{u} \sim \mathcal{N}(\mathbf{0}, I)$$
+
+> We output $\log\boldsymbol{\sigma}$ instead of $\boldsymbol{\sigma}$ directly 
+> to keep values unconstrained — avoids forcing the network to output 
+> strictly positive numbers.
+
+### Decoder — $p_{\boldsymbol{\theta}}(\mathbf{x}|\mathbf{z})$ (Factorized Bernoulli for binary data)
+
+$$\mathbf{s} = \text{DecodingNN}(\mathbf{z};\boldsymbol{\theta}), \quad \mathbf{s} \in [0,1]^d$$
+$$\log p_{\boldsymbol{\theta}}(\mathbf{x}|\mathbf{z}) = \sum_j \left[x_j \log s_j + (1-x_j)\log(1-s_j)\right] = -\text{BCE}(\mathbf{x}, \mathbf{s})$$
+
+### Prior — $p_{\boldsymbol{\theta}}(\mathbf{z})$
+
+$$p_{\boldsymbol{\theta}}(\mathbf{z}) = \mathcal{N}(\mathbf{0}, I) \quad \Rightarrow \quad \log p_{\boldsymbol{\theta}}(\mathbf{z}) = -\frac{1}{2}\sum_j \left[z_j^2 + \log(2\pi)\right]$$
+
+## 12. VAE Loss (Basic Form)
+
+Let $\mathbf{y}_1 = \boldsymbol{\mu}$, $\mathbf{y}_2 = \log\boldsymbol{\sigma}$ 
+be encoder outputs.
+
+$$\boxed{-L(\mathbf{x};\boldsymbol{\theta},\boldsymbol{\phi}) = \underbrace{\text{BCE}(\mathbf{x}, \mathbf{s})}_{\text{Reconstruction Loss}} + \underbrace{\frac{1}{2}\|\mathbf{y}_1\|^2 + \frac{1}{2}\|e^{\mathbf{y}_2}\|^2 - \sum_j y_{2,j}}_{\text{KL Divergence Loss}}}$$
+
+**Equivalently**:
+$$-L = -\mathbb{E}_{q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x})}\!\left[\log p_{\boldsymbol{\theta}}(\mathbf{x}|\mathbf{z})\right] + D_{KL}\!\left(q_{\boldsymbol{\phi}}(\mathbf{z}|\mathbf{x}) \| p_{\boldsymbol{\theta}}(\mathbf{z})\right)$$
+
+### The Two Terms and Their Tension
+
+| Term | Role | Too much weight → |
+|---|---|---|
+| **Reconstruction (BCE)** | Faithfully reconstruct input | Encoder ignores prior → latent space collapses to points → poor generation |
+| **KL Divergence** | Force latent space toward $\mathcal{N}(\mathbf{0}, I)$ | Encoder ignores input → all inputs map to same distribution → poor reconstruction |
+
+> **The tension:** Reconstruction wants the encoder to be **input-specific** 
+> (different $\mathbf{z}$ for different $\mathbf{x}$), while KL wants all 
+> encodings to look like the **same standard Gaussian**. The balance produces 
+> a structured yet expressive latent space.
+
+## 13. Key Takeaways
+
+- **AEs** produce a discontinuous latent space → poor generation.
+- **VAEs** enforce a structured (Gaussian) latent space → smooth, continuous generation.
+- The **ELBO** is a tractable lower bound on the log-likelihood, avoiding 
+  intractable posterior computation.
+- The **reparameterization trick** moves randomness outside the computational 
+  graph → enables gradient flow through stochastic sampling.
+- The VAE loss balances **reconstruction quality** (BCE) and **latent 
+  regularization** (KL divergence toward $\mathcal{N}(\mathbf{0}, I)$).
+
+---
+
+# Lecture 10: GANs & Neural Style Transfer
+
+## 1. Generative Adversarial Networks (GANs)
+
+### Setup
+
+| Component | Definition |
+|-----------|-----------|
+| Latent variable | $\mathbf{z} \sim p_0 = \mathcal{N}(0, I_n)$ |
+| Training data | $\{\mathbf{x}^{(i)} \in \mathbb{R}^d : i=1,\ldots,N,\ \mathbf{x}^{(i)} \sim p^*\}$ |
+| Generator | $G_{\boldsymbol{\theta}} : \mathbb{R}^n \to \mathbb{R}^d$ — maps noise to fake samples |
+| Discriminator | $D_{\boldsymbol{\phi}} : \mathbb{R}^d \to [0,1]$ — predicted probability of $\mathbf{x}$ being **real** |
+
+### Objective (Min-Max / Saddle-Point)
+
+$$\min_{\boldsymbol{\theta}} \max_{\boldsymbol{\phi}}\ L(\boldsymbol{\theta}, \boldsymbol{\phi}) = \mathbb{E}_{\mathbf{x}\sim p^*}[\log D_{\boldsymbol{\phi}}(\mathbf{x})] + \mathbb{E}_{\mathbf{z}\sim p_0}[\log(1 - D_{\boldsymbol{\phi}}(G_{\boldsymbol{\theta}}(\mathbf{z})))]$$
+
+- **Discriminator** maximises $L$ — learns to tell real from fake
+- **Generator** minimises $L$ — learns to fool the discriminator
+
+### Nash Equilibrium
+
+- $p_{G_\theta} = p^*$ — generator perfectly matches true distribution
+- $D_{\boldsymbol{\phi}}(\mathbf{x}) = \tfrac{1}{2}$ for all $\mathbf{x}$ — discriminator is maximally confused
+
+> **Why $D = \frac{1}{2}$ means the generator wins:** The discriminator can do 
+> no better than a random $50/50$ guess — it **cannot distinguish real from fake** 
+> — implying $p_G = p^*$. The generator has perfectly replicated the true distribution.
+
+### Basic Training Algorithm
+
+```
+Repeat:
+  For k steps:
+    Sample m noise {z^(i)} ~ p0, real {x^(i)} from D
+    Update discriminator (ascent):
+      φ ← φ + ε₁ ∇_φ (1/m) Σ [log D_φ(x^(i)) + log(1 − D_φ(G_θ(z^(i))))]
+  
+  Sample m noise {z^(i)} ~ p0
+  Update generator (descent):
+    θ ← θ − ε₂ ∇_θ (1/m) Σ log(1 − D_φ(G_θ(z^(i))))
+```
+
+## 2. Theoretical Connection: JS Divergence
+
+### Optimal Discriminator Derivation
+
+For fixed $G$, the discriminator maximizes:
+$$L(\boldsymbol{\phi}) = \mathbb{E}_{\mathbf{x}\sim p^*}[\log D(\mathbf{x})] + \mathbb{E}_{\mathbf{z}\sim p_0}[\log(1 - D(G(\mathbf{z})))]$$
+
+Rewrite as an integral over $\mathbf{x}$:
+$$L = \int \left[p^*(\mathbf{x})\log D(\mathbf{x}) + p_G(\mathbf{x})\log(1 - D(\mathbf{x}))\right] d\mathbf{x}$$
+
+For each $\mathbf{x}$, maximize $f(D) = a\log D + b\log(1-D)$ where 
+$a = p^*(\mathbf{x})$, $b = p_G(\mathbf{x})$:
+$$\frac{df}{dD} = \frac{a}{D} - \frac{b}{1-D} = 0$$
+$$\Rightarrow a(1-D) = bD \Rightarrow \boxed{D^*(\mathbf{x}) = \frac{p^*(\mathbf{x})}{p^*(\mathbf{x}) + p_G(\mathbf{x})}}$$
+
+At equilibrium $p_G = p^*$:
+$$D^*(\mathbf{x}) = \frac{p^*(\mathbf{x})}{p^*(\mathbf{x}) + p^*(\mathbf{x})} = \frac{1}{2} \quad \checkmark$$
+
+**GAN training ≡ minimising Jensen-Shannon divergence:**
+$$\min_G D_{JS}(p_G \| p^*) - 2\log 2$$
+
+**Jensen-Shannon Divergence:**
+$$D_{JS}(p \| q) = \frac{1}{2}D_{KL}\!\left(p\,\Big\|\,\frac{p+q}{2}\right) + \frac{1}{2}D_{KL}\!\left(q\,\Big\|\,\frac{p+q}{2}\right)$$
+
+- Non-negative, symmetric, and $D_{JS}=0 \iff p=q$
+- $\sqrt{D_{JS}}$ is a metric on the space of distributions
+
+## 3. Training Problems & Solutions
+
+### Problem I: Vanishing Gradients
+
+$$\nabla_{\boldsymbol{\theta}} L \propto \mathbb{E}_{\mathbf{z}\sim p_0} D_{\boldsymbol{\phi}}(G_{\boldsymbol{\theta}}(\mathbf{z})) \approx 0 \quad \text{when } D_{\boldsymbol{\phi}} \approx 0$$
+
+Early training: bad generator → $D(G(\mathbf{z})) \approx 0$ → 
+$\log(1 - D(G(\mathbf{z}))) \approx \log(1) = 0$ → **gradient vanishes**.
+
+**Fix:** Replace $\log(1 - D(G(\mathbf{z})))$ with $-\log D(G(\mathbf{z}))$:
+
+| Loss | Gradient near $D \approx 0$ | Gradient near $D \approx 1$ |
+|---|---|---|
+| $\log(1-D)$ | $\approx 0$ — **vanishes** | Large — but generator already good |
+| $-\log D$ | Large — **strong signal** | $\approx 0$ — but generator already good |
+
+$-\log D$ provides stronger gradients exactly when the generator needs them most.
+
+**Why we still keep $\log(1-D)$ in the theory:**
+- $\log(1-D)$ is the **theoretically correct** zero-sum formulation — gives clean 
+  Nash equilibrium and JS divergence interpretation
+- $-\log D$ is a **practical heuristic** that breaks zero-sum structure but trains 
+  better — no need to switch back as generator improves since gradients naturally 
+  diminish when $D(G(\mathbf{z})) \to \frac{1}{2}$
+
+> This is a recurring theme in deep learning — theoretically correct formulations 
+> are sometimes abandoned for pragmatic ones. WGAN later resolved this properly 
+> by changing the objective entirely.
+
+### Problem II: Non-Convergence
+
+Gradient descent is not designed for min-max problems. Alternating GD may 
+**orbit** rather than converge to the Nash equilibrium.
+
+### Problem III: Mode Collapse
+
+Generated samples cluster around one mode (low diversity).
+
+**Fix — Mini-Batch GAN:** Feed batch statistics (e.g. pairwise $L^2$ norms, 
+variance) into the discriminator so it can **reject low-diversity batches**.
+
+## 4. Wasserstein GAN (WGAN)
+
+### Why KL/JS Fail on Singular Distributions
+
+When $p_G$ and $p^*$ have **disjoint support** (no overlap):
+- KL = $\infty$, JS = $\log 2$ — both are **constants** w.r.t. $\theta$
+- Zero gradient → training breaks down completely
+
+**Parallel lines example:** $p_\theta =$ distribution of $(\theta, z)$, 
+$p^* =$ distribution of $(0, z)$:
+
+$$D_{KL}(p_\theta \| p^*) = \mathbb{1}_{\theta \neq 0}(+\infty), \qquad D_{JS}(p_\theta \| p^*) = \mathbb{1}_{\theta \neq 0}(\log 2)$$
+
+Both are **discontinuous** at $\theta=0$ — gradient descent breaks down entirely.
+
+### Wasserstein (Earth-Mover's) Distance
+
+Measures the **minimum cost of transporting** mass from $p_G$ to $p^*$ — 
+like the minimum effort to move a pile of dirt into a target shape:
+
+$$W(p, q) = \inf_{\gamma \in \Pi(p,q)} \mathbb{E}_{(\mathbf{x},\mathbf{y})\sim\gamma}[\|\mathbf{x} - \mathbf{y}\|]$$
+
+where $\Pi(p,q)$ = all joint distributions with marginals $p$ and $q$.
+
+**Advantages over KL/JS:**
+
+| Property | KL/JS | Wasserstein |
+|---|---|---|
+| Disjoint support | $\infty$ or constant | Smooth, finite |
+| Gradient at $\theta=0$ | Undefined | $\pm 1$ — always exists |
+| Symmetry | KL: No, JS: Yes | Yes |
+| Parallel lines | Discontinuous | $W = \|\theta\|$ — continuous |
+
+> **Key insight:** Wasserstein respects the **geometry of the space** — accounts 
+> for how far apart distributions are, not just whether they overlap. KL/JS are 
+> blind to distance when supports are disjoint.
+
+### Kantorovich–Rubinstein Duality
+
+$$W(p_{\boldsymbol{\theta}}, p^*) = \sup_{\|f\|_L \leq 1}\ \mathbb{E}_{\mathbf{x}\sim p_{\boldsymbol{\theta}}}[f(\mathbf{x})] - \mathbb{E}_{\mathbf{x}\sim p^*}[f(\mathbf{x})]$$
+
+$\|f\|_L$ = Lipschitz constant of $f$ (think: $\max\|\nabla f\|$).
+
+### WGAN Approximation & Training
+
+Approximate $W$ using a neural **critic** $f(\mathbf{x}; \boldsymbol{\phi})$ 
+constrained to be 1-Lipschitz (via **weight clipping** or **gradient penalty**):
+
+$$W(p_{\boldsymbol{\theta}}, p^*) \approx \max_{\boldsymbol{\phi}}\ \mathbb{E}_{\mathbf{x}\sim p_{\boldsymbol{\theta}}}[f(\mathbf{x};\boldsymbol{\phi})] - \mathbb{E}_{\mathbf{x}\sim p^*}[f(\mathbf{x};\boldsymbol{\phi})]$$
+
+**Gradient for generator:**
+$$\nabla_{\boldsymbol{\theta}} W = \mathbb{E}_{\mathbf{z}\sim p_0}[\nabla_{\boldsymbol{\theta}} f(G_{\boldsymbol{\theta}}(\mathbf{z}); \hat{\boldsymbol{\phi}})]$$
+
+### WGAN Algorithm
+
+```
+Repeat:
+  For k steps:
+    Sample {z^(i)} ~ p0, real {x^(i)} from D
+    Update critic (ascent):
+      φ ← φ + ε₁ (1/m) Σ ∇_φ [f(x^(i);φ) − f(G_θ(z^(i));φ)]
+  
+  Sample {z^(i)} ~ p0
+  Update generator (descent):
+    θ ← θ − ε₂ (1/m) Σ ∇_θ f(G_θ(z^(i)); φ)
+```
+
+## 5. Neural Style Transfer (NST)
+
+### Goal
+
+Given content image $\mathbf{x}_c$ and style image $\mathbf{x}_s$, 
+**optimise a new image** $\mathbf{x}$ (not model weights):
+
+$$\min_{\mathbf{x}}\ \alpha\, L_c(\mathbf{x}, \mathbf{x}_c) + \beta\, L_s(\mathbf{x}, \mathbf{x}_s)$$
+
+### CNN Feature Notation
+
+For a pre-trained $L$-layer CNN:
+$$h^{(\ell)}_{ij}(\mathbf{x}) = j\text{-th pixel of }i\text{-th channel at layer }\ell$$
+
+Layer hierarchy: edges (Conv1) → textures (Conv3) → object parts (Conv5).
+
+### Content Loss
+
+Matches **where** features appear — use deeper layers for semantic content:
+
+$$E_c(\mathbf{x}, \mathbf{x}_c, \ell) = \frac{1}{2}\sum_{i,j}\left(h^{(\ell)}_{ij}(\mathbf{x}) - h^{(\ell)}_{ij}(\mathbf{x}_c)\right)^2$$
+
+$$L_c(\mathbf{x}, \mathbf{x}_c) = \sum_{\ell \in \ell_c} E_c(\mathbf{x}, \mathbf{x}_c, \ell)$$
+
+Use **deeper layers** (e.g. Conv4–5) to capture semantic content.
+
+### Style Loss — Gram Matrix
+
+The **Gram matrix** captures cross-channel feature correlations — 
+*which features co-occur* regardless of *where* they appear:
+
+$$G^{(\ell)}_{ij}(\mathbf{x}) = \sum_k h^{(\ell)}_{ik}(\mathbf{x})\, h^{(\ell)}_{jk}(\mathbf{x})$$
+
+**Why Gram matrix captures style not content:**
+
+| | Content | Style |
+|---|---|---|
+| **What matters** | *What* features appear *where* | *Which* features co-occur |
+| **Spatial info** | Required | Discarded (summed over $k$) |
+| **Tool** | Direct feature matching | Gram matrix |
+| **CNN layers** | Deep (semantic) | Shallow (texture) |
+
+> **Intuition:** Van Gogh's swirly style means certain texture features always 
+> appear together. The Gram matrix captures these co-occurrence statistics — 
+> it doesn't care *where* the swirls are, only *that* they co-occur.
+
+**Layer-wise style loss:**
+$$E_s(\mathbf{x}, \mathbf{x}_s, \ell) = \frac{1}{4N_l M_l}\sum_{i,j}\left(G^{(\ell)}_{ij}(\mathbf{x}) - G^{(\ell)}_{ij}(\mathbf{x}_s)\right)^2$$
+
+$$L_s(\mathbf{x}, \mathbf{x}_s) = \sum_{\ell \in \ell_s} E_s(\mathbf{x}, \mathbf{x}_s; \ell)$$
+
+where $N_l$ = number of channels, $M_l$ = spatial size at layer $\ell$.
+
+## 6. Quick Comparison
+
+| | GAN | WGAN | NST |
+|---|---|---|---|
+| **Objective** | Min-max JS divergence | Min Wasserstein distance | Min content + style loss |
+| **Adversary role** | Discriminator ($D$) | Critic ($f$, unbounded output) | None (optimise image directly) |
+| **Key problem** | Mode collapse, vanishing grad | Requires Lipschitz constraint | Choice of layers $\ell_c, \ell_s$ |
+| **Loss for generator** | $\log(1-D)$ theory, $-\log D$ practice | $-\mathbb{E}[f(G(\mathbf{z}))]$ | Content + style losses |
+
+---
+
+# Lecture 11: Seq2Seq, Attention & Transformers
+
+## 1. Sequence-to-Sequence (Seq2Seq) Autoencoders
+
+**Problem:** Input and output sequences may have different lengths, e.g. machine 
+translation, text summarisation.
+
+**Given:**
+$$\mathbf{x} = (x_1, x_2, \ldots, x_T), \quad \mathbf{y} = (y_1, y_2, \ldots, y_{T'})$$
+
+### Encoder
+Processes the input with an RNN (no outputs):
+$$h_t = f(x_t, h_{t-1})$$
+
+**Context vector** — summarises entire input:
+$$c = q(h_1, \ldots, h_T), \quad \text{simplest choice: } c = h_T$$
+
+**The bottleneck problem:** $c = h_T$ must compress the **entire input sequence 
+into a single fixed-size vector** regardless of sequence length. For long sequences, 
+earlier tokens' information gets progressively **overwritten** as the hidden state 
+processes more tokens — by the time we reach $h_T$, information from $h_1$ may be 
+largely lost. This is an **information bottleneck**, not a computational one.
+
+### Decoder
+Generates output autoregressively, conditioned on $c$:
+$$s_t = g(\hat{y}_{t-1},\, s_{t-1},\, c), \qquad \hat{y}_t \sim P(\hat{y}_t \mid s_t)$$
+
+- $s_0 = c$, initial input $\hat{y}_0 = \langle\text{bos}\rangle$
+- Output layer: softmax over vocabulary of size $V$
+
+### Probabilistic Formulation
+$$P(\mathbf{y} \mid \mathbf{x}) = \prod_{t=1}^{T'} P(y_t \mid \mathbf{y}_{<t},\, \mathbf{x})$$
+
+**Training loss** (minimise negative log-likelihood):
+$$\mathcal{L} = -\sum_{t=1}^{T'} \log P(y_t \vert \mathbf{y}_{<t}, \mathbf{x})$$
+
+## 2. Training: Teacher Forcing
+
+**Problem:** Autoregressive errors compound during training — one wrong prediction 
+cascades into worse subsequent predictions.
+
+**Teacher Forcing:** Feed ground-truth token $y_{t-1}$ (not predicted $\hat{y}_{t-1}$) 
+during training:
+$$s_t = g(y_{t-1},\, s_{t-1},\, c)$$
+
+Converts sequence generation into a collection of **next-token prediction** 
+problems → faster, more stable training.
+
+**Caveat — Exposure Bias:** During training the model only ever sees ground-truth 
+tokens as inputs — it never experiences the scenario where a wrong prediction feeds 
+into the next step. At inference, errors **compound** — one wrong prediction leads 
+to a worse next prediction, cascading catastrophically.
+
+**Mitigation — Scheduled Sampling:** Gradually increase the fraction of predicted 
+tokens used during training — bridging the gap between training and inference.
+
+
+## 3. Decoding Strategies
+
+### Greedy Search
+$$\hat{y}_t = \underset{y}{\arg\max}\; P(y \mid \mathbf{y}_{<t}, \mathbf{x})$$
+
+- Cost: $O(T'V)$, but can yield **suboptimal** sequences — locally optimal 
+  choices may not form a globally optimal sequence.
+
+### Exhaustive Search
+- Guaranteed optimal, but cost $O(V^{T'})$ — infeasible.
+
+### Beam Search
+- Keep top $k$ (beam width) candidate sequences at each step.
+- At each step, expand each of $k$ sequences with all $V$ tokens → prune to top $k$.
+- Cost: $O(kVT')$, still linear in $T'$.
+- $k = 1$ reduces to greedy search.
+
+**Scoring** (length-normalised log-probability):
+$$\text{score}(\mathbf{y}) = \frac{1}{L^\alpha} \sum_{t=1}^{L} \log P(y_t \mid \mathbf{y}_{<t}, \mathbf{x}), \quad \alpha \approx 0.75$$
+
+
+## 4. Attention Mechanisms
+
+### Motivation
+- $c = h_T$ is a bottleneck — poor for long sequences.
+- **Average Pooling:** $c = \frac{1}{T}\sum_{i=1}^{T} h_i$ — equal weight to 
+  all tokens regardless of relevance (insufficient).
+
+### Attention as Adaptive Pooling
+
+Compute a **different** context vector at each decoding step:
+$$c_t = \sum_i w_{t,i}\, h_i$$
+
+**Attention weights** (via softmax over alignment scores):
+$$w_{t,i} = \frac{\exp(e_{t,i})}{\sum_j \exp(e_{t,j})}$$
+
+**Alignment score** $e_{t,i} = a(h_i, s_{t-1})$ — choices:
+
+| Type | Formula |
+|------|---------|
+| Dot-product | $e_{t,i} = s_{t-1}^\top h_i$ |
+| Bilinear (general) | $e_{t,i} = s_{t-1}^\top W h_i$ |
+| Additive (Bahdanau) | $e_{t,i} = v^\top \tanh(W_s s_{t-1} + W_h h_i)$ |
+
+### Query-Key-Value (QKV) Framework
+
+Generalises attention as a **library search system**:
+
+```
+Query (Q): "I'm looking for information about weather"  ← what decoder wants
+   ↓
+Keys  (K): [weather: 0.9, food: 0.1, sports: 0.05]     ← what each encoder
+                                                           token advertises
+   ↓
+Weights:   softmax(Q·K) = [0.8, 0.15, 0.05]            ← relevance scores
+   ↓
+Values (V): actual content of each encoder token        ← what gets retrieved
+   ↓
+Output:    weighted sum of V                            ← retrieved information
+```
+
+$$e_{t,i} = a(k_i, q_t), \qquad c_t = \sum_i w_{t,i}\, v_i$$
+
+- **Key:** $k_i = W_k h_i$ — what each encoder position *advertises*
+- **Query:** $q_t = W_q s_{t-1}$ — what the decoder is *seeking*
+- **Value:** $v_i = W_v h_i$ — information *retrieved* from encoder
+
+> **Key insight:** Q and K determine *how much* to retrieve; V determines 
+> *what* is retrieved. Setting $W_k = W_q = W_v = I$ recovers standard 
+> average pooling — QKV generalizes this by making pooling **adaptive**.
+
+**Why different context vector at each step?**
+
+At each decoding step $t$, the query $q_t = W_q s_{t-1}$ changes — the decoder 
+is "looking for" different information at each step. Generating "Paris" in 
+"The capital of France is Paris" requires attending to "France"; generating 
+"capital" requires attending to different tokens entirely.
+
+## 5. Multi-Head Attention
+
+A single attention head may miss different relational aspects simultaneously. 
+Use $L$ independent heads — each learns different Q, K, V projections:
+
+$$e_{t,i}^l = a(k_i^l, q_t^l), \quad w_{t,i}^l = \text{softmax}(e_{t,i}^l), \quad C_t^l = \sum_i w_{t,i}^l v_i^l$$
+
+Each head has independent parameters $W_k^l, W_q^l, W_v^l$. Outputs are 
+**concatenated** and passed to the decoder.
+
+> **Intuition:** One head might capture syntactic relationships, another 
+> semantic ones, another coreference — multiple heads allow the model to 
+> jointly attend to information from different representation subspaces.
+
+## 6. Self-Attention (Encoder)
+
+**Motivation:** Remove recurrence from encoder while retaining context-specificity.
+
+### Self-Attention vs Encoder-Decoder Attention
+
+**Encoder-Decoder Attention** — bridges two sequences:
+```
+Encoder tokens:  [The] [cat] [sat] [on] [mat]
+                   ↑     ↑     ↑    ↑    ↑
+                  K,V   K,V   K,V  K,V  K,V
+                               |
+                      attention weights
+                               |
+Decoder token:            [Le]  ← Q comes from decoder state
+```
+Q comes from **decoder**, K and V come from **encoder**.
+
+**Self-Attention** — tokens within the same sequence attend to each other:
+```
+Tokens:  [The] [cat] [sat] [on] [mat]
+           ↕     ↕     ↕    ↕    ↕
+         Q,K,V Q,K,V Q,K,V Q,K,V Q,K,V
+
+"cat" attends to "sat" and "mat" — building context-aware representation
+```
+Q, K, V all come from the **same sequence**.
+
+**Why self-attention produces context-dependent representations:**
+
+Standard embedding: "bank" always maps to the **same vector** regardless of context.
+
+Self-attention: "bank" in "river bank" attends strongly to "river"; "bank" in 
+"bank account" attends strongly to "account" — **same word, different representation** 
+depending on surrounding context.
+
+### Matrix Form
+$$Q = XW_q,\quad K = XW_k,\quad V = XW_v$$
+$$E = QK^\top, \quad A = \text{softmax}(E), \quad Z = AV$$
+
+**Multi-head self-attention block** = Multi-head self-attention + MLP 
+(same MLP shared across all tokens).
+
+## 7. Positional Encoding
+
+Self-attention computes $e_{ij} = q_i^\top k_j$ — a dot product that is 
+**order-agnostic**. Shuffling tokens produces identical attention scores. 
+Without positional encoding, "cat sat on mat" = "mat on sat cat" to the transformer.
+
+Position information must be injected explicitly:
+$$h_i = \text{WordEmbedding}(x_i) + P_i$$
+
+**Sinusoidal Positional Encoding:**
+$$P_t = \begin{bmatrix} \sin(\omega_1 t) \\ \cos(\omega_1 t) \\ \sin(\omega_2 t) \\ \cos(\omega_2 t) \\ \vdots \\ \sin(\omega_{d/2}\, t) \\ \cos(\omega_{d/2}\, t) \end{bmatrix}, \qquad \omega_l = \frac{1}{10000^{2l/d}}$$
+
+> **Intuition:** Like a **clock with multiple hands at different frequencies** — 
+> each position $t$ gets a unique combination of sine/cosine values across 
+> different frequencies, like a unique timestamp. Low $\omega_l$ = slow-changing 
+> (coarse position); high $\omega_l$ = fast-changing (fine position).
+
+**Linear shift property:**
+$$P_{t+\tau} = M_\tau P_t$$
+
+$$M_\tau = \text{diag}\left( \begin{bmatrix}\cos(\omega_l\tau) & \sin(\omega_l\tau) \\ -\sin(\omega_l\tau) & \cos(\omega_l\tau)\end{bmatrix},\ l = 1\ldots d/2 \right)$$
+
+$M_\tau$ is a fixed rotation matrix depending only on the **gap** $\tau$, 
+not the absolute position $t$:
+
+> The relationship between position 3 and 7 ($\tau=4$) undergoes the **same 
+> linear transformation** as between position 10 and 14 ($\tau=4$). This enables 
+> **shift-invariant attention** — relative relationships between tokens generalize 
+> regardless of where in the sequence they appear.
+
+**Properties:** Each $P_t$ is unique and equal-norm; relative displacement $\tau$ 
+only depends on the gap.
+
+## 8. Masked Self-Attention (Decoder)
+
+Decoder cannot attend to future tokens — otherwise the model trivially copies 
+future tokens instead of learning to predict them.
+
+**Causal mask** $M$:
+$$M_{ij} = \begin{cases} -\infty & j > i \\ 0 & \text{otherwise} \end{cases}$$
+
+**Masked attention:**
+$$\text{MaskedAttn}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top + M}{\sqrt{d_k}}\right)V$$
+
+Adding $-\infty$ before softmax makes $\exp(-\infty) = 0$ — future positions 
+get **exactly zero attention weight**.
+
+### Parallelisable in Training, Sequential in Inference
+
+| | Training | Inference |
+|---|---|---|
+| Tokens available | All at once (teacher forcing) | One at a time |
+| Masking | Blocks future positions mathematically | No future tokens exist yet |
+| Processing | All positions computed **simultaneously** | Must wait for $\hat{y}_{t-1}$ before computing $\hat{y}_t$ |
+
+> **Key insight:** The mask *simulates* sequentiality during training — 
+> allowing full parallelism while preventing information leakage.
+
+## 9. Scaled Dot-Product Attention
+
+If $q, k$ have zero mean and unit variance, then:
+$$\text{Var}(q^\top k) = d_k$$
+
+For large $d_k$, dot products grow as $\mathcal{O}(\sqrt{d_k})$ — feeding 
+large values into softmax:
+$$\text{softmax}(z)_i = \frac{\exp(z_i)}{\sum_j \exp(z_j)}$$
+
+The exponential **drastically amplifies differences** — if one $z_i$ is much 
+larger than others, $\exp(z_i)$ dominates the sum, pushing softmax toward a 
+**one-hot distribution** → vanishing gradients everywhere except the dominant 
+position.
+
+**Fix — scale by $\sqrt{d_k}$:**
+$$e_{i,j} = \frac{q_i^\top k_j}{\sqrt{d_k}}, \qquad A = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+
+$$\text{Var}\!\left(\frac{q^\top k}{\sqrt{d_k}}\right) = \frac{d_k}{d_k} = 1$$
+
+Scaling keeps variance at 1 regardless of $d_k$ — softmax stays **smooth and 
+differentiable**, gradients flow properly.
+
+## 10. Encoder-Decoder Transformer Architecture
+
+| Component | Description |
+|-----------|-------------|
+| Encoder | Stack of Multi-head Self-attention Blocks |
+| Decoder | Stack of Masked Multi-head Self-attention Blocks |
+| Cross-attention | Queries = decoder states; Keys and Values = encoder outputs |
+| MLP / Feed-forward | 2-layer MLP applied token-wise (shared parameters) |
+| Add and Norm | Residual connection + Layer Normalisation |
+
+**Pre-norm vs Post-norm:**
+- **Post-norm:** tighter control but harder to train
+- **Pre-norm:** easier identity mapping, more stable gradients — preferred in 
+  deep modern architectures
+
+## 11. Vision Transformers (ViT)
+
+**Key idea:** Treat an image as a sequence of patches (tokens).
+
+**Patch Embedding:**
+- Input image: $\mathbf{x} \in \mathbb{R}^{H \times W \times C}$, patch size $P \times P$
+- Number of patches: $N = \frac{HW}{P^2}$
+- Each flattened patch $x_i \in \mathbb{R}^{P^2 C}$ is projected: 
+  $z_i = Ex_i \in \mathbb{R}^D$, where $E \in \mathbb{R}^{D \times P^2C}$
+- Equivalent to a convolution with filter size $P \times P$, stride $P$, 
+  $D$ output channels
+
+**Class (CLS) token:** Learnable vector $z_\text{cls} \in \mathbb{R}^D$ prepended 
+to sequence; aggregates global information for classification.
+
+**Positional Embedding:** Learnable $E_\text{pos} \in \mathbb{R}^{(N+1) \times D}$; 
+final input $= [z_\text{cls},\, \mathbf{z}] + E_\text{pos}$
+
+**ViT example (original paper):** $224 \times 224$ image, $16 \times 16$ patches 
+$\to N = 196$ tokens.
+
+### CNN vs ViT
+
+| Property | CNN | ViT |
+|----------|-----|-----|
+| Inductive bias | Strong (translation equivariance, local connectivity) | Weak — no built-in spatial assumptions |
+| Receptive field | Grows gradually with depth | Global from first layer |
+| Feature extraction | Local convolution | Attention across patches |
+| Data requirement | Moderate | Large datasets |
+| Small data performance | Better | Worse — must learn spatial structure from scratch |
+
+> **Key insight:** CNN's inductive biases are free assumptions that happen to be 
+> correct for images — they don't need to be learned from data. ViT has no such 
+> assumptions, so it needs **large amounts of data to discover spatial relationships 
+> empirically**. On large enough datasets, ViT matches or exceeds CNN performance.
+
+**Conformer:** Combines convolution (local, short-range) + self-attention 
+(global, long-range).
+
+## 12. Transformer Regimes
+
+| Model | Architecture | Pretraining | Best For |
+|-------|-------------|-------------|----------|
+| **BERT** | Encoder-only | Masked token prediction | Understanding, classification |
+| **T5** | Encoder-Decoder | Corrupt span reconstruction | Seq2seq: translation, summarisation |
+| **GPT** | Decoder-only | Next-token prediction | Open-ended generation, prompting |
+
+**BERT — Encoder only:**
+- Bidirectional context — each token attends to **all** other tokens
+- Masked token prediction: randomly mask 15% of tokens, predict from context
+- Best for **understanding tasks** where full context matters
+- Fine-tune by adding a task-specific head on top of encoder outputs
+
+**T5 — Encoder-Decoder:**
+- Text-to-text interface — every task reformulated as string $\to$ string
+- Same model for translation, summarization, classification — just change the prompt
+- Best for **seq2seq tasks** where input and output are different sequences
+
+**GPT — Decoder only:**
+- Causal attention — each token only attends to **previous** tokens
+- Next-token prediction: simplest possible pretraining objective
+- Best for **generation** — naturally produces text autoregressively
+- In-context learning: task examples in prompt guide behavior without fine-tuning
+
+## 13. Key Complexity Summary
+
+| Method | Computational Cost | Notes |
+|--------|-------------------|-------|
+| Greedy Search | $O(T'V)$ | May be suboptimal |
+| Beam Search | $O(kVT')$ | Better quality |
+| Self-Attention | $O(N^2)$ per layer | Parallelisable |
+| RNN | $O(N)$ per step | Sequential, not parallelisable |
+
+## 14. Tokenisation — General Principle
+
+Transformers are **token sequence processors**. Any modality can be processed 
+with appropriate tokenisation:
+- **Text:** Word / subword embeddings
+- **Vision:** Patch embeddings
+- **Audio:** Spectrogram patches
+- **Multimodal:** Concatenate tokens from different sources

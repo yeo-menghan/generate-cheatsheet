@@ -11,8 +11,6 @@ $$\min_{W,H} \frac{1}{2}\|V - WH\|_F^2 \quad \text{s.t.} \quad W \geq 0,\ H \geq
 
 **Bi-convex** (non-convex jointly, but convex in W or H separately).
 
----
-
 ## Variants
 
 | Variant | Extra Constraint | Use Case |
@@ -23,8 +21,6 @@ $$\min_{W,H} \frac{1}{2}\|V - WH\|_F^2 \quad \text{s.t.} \quad W \geq 0,\ H \geq
 | Sparse NMF | $+ \lambda_W\|W\|_1 + \lambda_H\|H\|_1$ | Localized features |
 
 **Key lemma (Orthogonal NMF):** $H \geq 0$ and $HH^T = I_r$ ⟹ each column of $H$ has **at most one positive entry**.
-
----
 
 ## Algorithms
 
@@ -43,8 +39,6 @@ $$W \leftarrow W \odot \frac{VH^T}{WHH^T}, \qquad H \leftarrow H \odot \frac{W^T
 ### ALS (default in sklearn)
 Solve unconstrained least squares for H, then W; project onto $\mathbb{R}^+$ after each step.
 
----
-
 ## Key Equations
 
 | Item | Formula |
@@ -55,8 +49,6 @@ Solve unconstrained least squares for H, then W; project onto $\mathbb{R}^+$ aft
 | Gradient w.r.t. H | $\nabla_H f = -W^T(V-WH)$ |
 | Projection | $\Pi_+(x) = \max(x,\, 0)$ element-wise |
 | Rank inequality | $\text{rank}(V) \leq \text{rank}_+(V) \leq \min(m,n)$ |
-
----
 
 ## Cluster Membership Rules
 

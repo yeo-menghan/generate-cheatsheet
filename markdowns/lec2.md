@@ -1,7 +1,5 @@
 # Lecture 2: Gradient Descent & Linear Regression
 
----
-
 ## 1. Gradient Descent Basics
 
 **Stationary point:** $\nabla f(x) = 0$ — necessary condition for a local min.
@@ -15,8 +13,6 @@
 $$x^{(k+1)} = x^{(k)} + \alpha_k p^{(k)}$$
 where $\alpha_k > 0$ is the step length/learning rate and $p^{(k)}$ is the search direction.
 
----
-
 ## 2. Descent Direction
 
 $p^{(k)}$ is a **descent direction** at $x^{(k)}$ if:
@@ -25,8 +21,6 @@ $$\nabla f(x^{(k)})^T p^{(k)} < 0$$
 This guarantees $\exists\, \delta > 0$ such that $f(x^{(k)} + \alpha_k p^{(k)}) < f(x^{(k)})$ for all $\alpha_k \in (0, \delta)$.
 
 > **Tip:** $p = -\nabla f(x^{(k)})$ always satisfies this since $\nabla f^T(-\nabla f) = -\|\nabla f\|^2 \leq 0$.
-
----
 
 ## 3. Steepest Descent Method
 
@@ -56,15 +50,11 @@ $$f(x^{(k)} + \alpha p^{(k)}) \leq f(x^{(k)}) + c_1 \alpha \nabla f(x^{(k)})^T p
 
 > Note: RHS < LHS initially since $\nabla f^T p < 0$, so the condition requires sufficient decrease.
 
----
-
 ## 4. Properties of Steepest Descent (Exact Line Search)
 
 - **Perpendicular steps:** consecutive steps are orthogonal
 - **Monotone decrease:** $f(x^{(k+1)}) < f(x^{(k)})$ if $\nabla f(x^{(k)}) \neq 0$
 - **Zig-zag behaviour** near the solution (inherently slow)
-
----
 
 ## 5. Linear Regression — One Variable
 
@@ -81,8 +71,6 @@ $$\frac{\partial L}{\partial \beta_1} = \sum_{i=1}^n (\beta_1 x_i + \beta_0 - y_
 $$\beta_0^{(k+1)} = \beta_0^{(k)} - \alpha_k \sum_{i=1}^n (\beta_1^{(k)} x_i + \beta_0^{(k)} - y_i)$$
 $$\beta_1^{(k+1)} = \beta_1^{(k)} - \alpha_k \sum_{i=1}^n (\beta_1^{(k)} x_i + \beta_0^{(k)} - y_i)\, x_i$$
 
----
-
 ## 6. Linear Regression — Multiple Variables
 
 **Model:** $f(x) = \beta^T x + \beta_0,\quad \beta \in \mathbb{R}^p$
@@ -93,8 +81,6 @@ $$L(\beta_0, \beta) = \frac{1}{2}\sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)^2$$
 **Gradients:**
 $$\frac{\partial L}{\partial \beta_0} = \sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)$$
 $$\frac{\partial L}{\partial \beta_j} = \sum_{i=1}^n (\beta^T x_i + \beta_0 - y_i)\, x_{ij} \quad j=1,\ldots,p$$
-
----
 
 ## 7. Normal Equation (Analytical Solution)
 
@@ -112,13 +98,9 @@ $$\hat{\beta} = (\hat{X}^T \hat{X})^{-1} \hat{X}^T Y$$
 | Over-determined | $n \gg p$, $\hat{X}^T\hat{X}$ invertible | Unique |
 | Under-determined | $n < p$, $\hat{X}^T\hat{X}$ not invertible | Infinite |
 
----
-
 ## 8. Feature Scaling (Standardisation)
 
 $$X_{\cdot j} \leftarrow \frac{X_{\cdot j} - \text{mean}(X_{\cdot j})}{\text{std}(X_{\cdot j})}, \qquad Y \leftarrow \frac{Y - \text{mean}(Y)}{\text{std}(Y)}$$
-
----
 
 ## 9. Steepest Descent vs. Normal Equation
 

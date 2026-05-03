@@ -140,16 +140,7 @@ $$\beta^{(k+1)} = \beta^{(k)} + \tau\sigma\!\left(X^T y^{(k+1)} + v^{(k+1)}\righ
 
 where $B_\lambda = \{v \mid \|v\|_\infty \leq \lambda\}$ and $\Pi_{B_\lambda}(s)_i = \text{clamp}(s_i,\,-\lambda,\,\lambda)$.
 
-## 6. Key Operators
-
-| Operator | Formula | Used in |
-|----------|---------|---------|
-| **Soft-thresholding** $\mathcal{S}_\tau(x)_i$ | $\text{sign}(x_i)\cdot\max(\|x_i\| - \tau,\; 0)$ | $\ell_1$ proximal |
-| **SVD soft-threshold** | Apply $\mathcal{S}_{1/\sigma}$ to singular values | Nuclear norm proximal |
-| **Projection onto $B_\lambda$** | Clamp each entry to $[-\lambda,\, \lambda]$ | Dual Lasso |
-| **Projection onto set $C$** | $\Pi_C(v) = \arg\min_{z \in C}\|z - v\|$ | Constrained problems |
-
-## 7. Practical Notes
+## 6. Practical Notes
 
 - **$\sigma$ too large** $\Rightarrow$ insufficient minimization of $f + g$
 - **$\sigma$ too small** $\Rightarrow$ insufficient feasibility enforcement

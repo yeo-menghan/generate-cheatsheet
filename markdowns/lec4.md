@@ -1,243 +1,181 @@
 # Lecture 4: Proximal Gradient Method
 
----
-
 ## 1. Norms
 
 | Norm | Definition |
 |------|-----------|
-| ℓ₁ | ‖x‖₁ = Σᵢ \|xᵢ\| |
-| ℓ₂ | ‖x‖₂ = √(Σᵢ xᵢ²) |
-| ℓ∞ | ‖x‖∞ = maxᵢ \|xᵢ\| |
-| ℓp | ‖x‖p = (Σᵢ \|xᵢ\|ᵖ)^(1/p) |
-| Frobenius | ‖A‖²_F = ⟨A, A⟩ = Tr(AᵀA) |
+| $\ell_1$ | $\lVert x\rVert_1 = \sum_i \lvert x_i\rvert$ |
+| $\ell_2$ | $\lVert x\rVert_2 = \sqrt{\sum_i x_i^2}$ |
+| $\ell_\infty$ | $\lVert x\rVert_\infty = \max_i \lvert x_i\rvert$ |
+| $\ell_p$ | $\lVert x\rVert_p = \left(\sum_i \lvert x_i\rvert^p\right)^{1/p}$ |
+| Frobenius | $\lVert A\rVert_F^2 = \langle A, A \rangle = \text{Tr}(A^T A)$ |
 
-**Inner product (matrices):** ⟨A, B⟩ = Tr(AᵀB) = Σᵢ Σⱼ Aᵢⱼ Bᵢⱼ
+**Inner product (matrices):** $\langle A, B \rangle = \text{Tr}(A^T B) = \sum_i \sum_j A_{ij} B_{ij}$
 
-**Inner product (vectors):** ⟨x, y⟩ = xᵀy = Σᵢ xᵢ yᵢ
+**Inner product (vectors):** $\langle x, y \rangle = x^T y = \sum_i x_i y_i$
 
----
+## 2. Projection onto Closed Convex Set $C$
 
-## 2. Projection onto Closed Convex Set C
+$$\Pi_C(z) = \arg\min_{x \in C} \frac{1}{2}\|x - z\|^2$$
 
-```
-ΠC(z) = argmin  ½‖x − z‖²
-          x ∈ C
-```
+**Characterisation:** $x^* = \Pi_C(z) \iff \langle z - x^*, x - x^* \rangle \leq 0 \quad \forall x \in C$
 
-**Characterisation:**  x\* = ΠC(z)  ⟺  ⟨z − x\*, x − x\*⟩ ≤ 0  for all x ∈ C
-
-| Set C | ΠC(z) |
-|-------|--------|
-| ℝⁿ₊ (positive orthant) | max{z, 0}  (elementwise) |
-| ℓ₂-ball { ‖x‖₂ ≤ 1 } | z / max{‖z‖₂ , 1} |
-| 𝕊ⁿ₊ (PSD cone), A = QΛQᵀ | Q · diag(max{λᵢ, 0}) · Qᵀ |
-
----
+| Set $C$ | $\Pi_C(z)$ |
+|---------|------------|
+| $\mathbb{R}^n_+$ (positive orthant) | $\max\{z, 0\}$ (elementwise) |
+| $\ell_2$-ball $\{\|x\|_2 \leq 1\}$ | $z / \max\{\|z\|_2, 1\}$ |
+| $\mathbb{S}^n_+$ (PSD cone), $A = Q\Lambda Q^T$ | $Q \cdot \text{diag}(\max\{\lambda_i, 0\}) \cdot Q^T$ |
 
 ## 3. Normal Cone
 
-```
-NC(x̄) = { z  |  ⟨z, x − x̄⟩ ≤ 0  for all x ∈ C }
-```
+$$\mathcal{N}_C(\bar{x}) = \{ z \mid \langle z, x - \bar{x} \rangle \leq 0 \quad \forall x \in C \}$$
 
-**Key equivalence:**  u ∈ NC(y)  ⟺  y = ΠC(y + u)
+**Key equivalence:** $u \in \mathcal{N}_C(y) \iff y = \Pi_C(y + u)$
 
-**Property:** If x̄ ∈ int(C), then NC(x̄) = {0}
+**Property:** If $\bar{x} \in \text{int}(C)$, then $\mathcal{N}_C(\bar{x}) = \{0\}$
 
-**Example — C = [0, 1]:**
+**Example — $C = [0, 1]$:**
 
-| x̄ | NC(x̄) |
-|----|--------|
-| 0 | (−∞, 0] |
-| 1 | [0, +∞) |
-| (0, 1) | {0} |
-| x̄ ∉ C | ∅ |
+| $\bar{x}$ | $\mathcal{N}_C(\bar{x})$ |
+|-----------|--------------------------|
+| $0$ | $(-\infty, 0]$ |
+| $1$ | $[0, +\infty)$ |
+| $(0, 1)$ | $\{0\}$ |
+| $\bar{x} \notin C$ | $\emptyset$ |
 
-**Example — C = { x ∈ ℝ² : ‖x‖ ≤ 1 }:**
+**Example — $C = \{ x \in \mathbb{R}^2 : \|x\| \leq 1 \}$:**
 
-| x̄ | NC(x̄) |
-|----|--------|
-| ‖x̄‖ = 1 | { λx̄ : λ ≥ 0 } |
-| ‖x̄‖ < 1 | {0} |
-
----
+| $\bar{x}$ | $\mathcal{N}_C(\bar{x})$ |
+|-----------|--------------------------|
+| $\|\bar{x}\| = 1$ | $\{ \lambda\bar{x} : \lambda \geq 0 \}$ |
+| $\|\bar{x}\| < 1$ | $\{0\}$ |
 
 ## 4. Subdifferential
 
-```
-∂f(x) = { v  |  f(z) ≥ f(x) + ⟨v, z − x⟩  for all z }
-```
+$$\partial f(x) = \{ v \mid f(z) \geq f(x) + \langle v, z - x \rangle \quad \forall z \}$$
 
-- If f differentiable at x: **∂f(x) = {∇f(x)}**
-- **Global optimality:** x̄ is a global minimiser  ⟺  **0 ∈ ∂f(x̄)**
-- **Indicator function:** ∂δC(x) = NC(x)  for x ∈ C
+- If $f$ differentiable at $x$: $\partial f(x) = \{\nabla f(x)\}$
+- **Global optimality:** $\bar{x}$ is a global minimiser $\iff 0 \in \partial f(\bar{x})$
+- **Indicator function:** $\partial \delta_C(x) = \mathcal{N}_C(x)$ for $x \in C$
 
-**Example — f(x) = |x|:**
+**Example — $f(x) = |x|$:**
 
-| x | ∂f(x) |
-|---|--------|
-| x < 0 | {−1} |
-| x = 0 | [−1, 1] |
-| x > 0 | {1} |
+| $x$ | $\partial f(x)$ |
+|-----|-----------------|
+| $x < 0$ | $\{-1\}$ |
+| $x = 0$ | $[-1, 1]$ |
+| $x > 0$ | $\{1\}$ |
 
-**Lasso sparsity condition** — at optimum β:
+**Lasso sparsity condition** — at optimum $\beta$:
 
-```
-βᵢ < 0  ⟹  [Xᵀ(Xβ − Y)]ᵢ =  λ
-βᵢ = 0  ⟺  |[Xᵀ(Xβ − Y)]ᵢ| ≤ λ   ← sparsity!
-βᵢ > 0  ⟹  [Xᵀ(Xβ − Y)]ᵢ = −λ
-```
-
----
+$$\beta_i < 0 \implies [X^T(X\beta - Y)]_i = \lambda$$
+$$\beta_i = 0 \iff |[X^T(X\beta - Y)]_i| \leq \lambda \quad \leftarrow \text{sparsity!}$$
+$$\beta_i > 0 \implies [X^T(X\beta - Y)]_i = -\lambda$$
 
 ## 5. Fenchel Conjugate
 
-```
-f*(y) = sup { ⟨y, x⟩ − f(x) }
-         x
-```
+$$f^*(y) = \sup_x \{ \langle y, x \rangle - f(x) \}$$
 
-**f\* is always convex and closed** (even if f is not).
+**$f^*$ is always convex and closed** (even if $f$ is not).
 
-If f is closed proper convex, then (f\*)\* = f.
+If $f$ is closed proper convex, then $(f^*)^* = f$.
 
 **Key triple equivalence:**
 
-```
-f(x) + f*(y) = ⟨x, y⟩  ⟺  y ∈ ∂f(x)  ⟺  x ∈ ∂f*(y)
-```
+$$f(x) + f^*(y) = \langle x, y \rangle \iff y \in \partial f(x) \iff x \in \partial f^*(y)$$
 
 **Examples:**
 
-| f(x) | f\*(y) |
-|------|--------|
-| ‖x‖₁ | δC(y),  C = { y : ‖y‖∞ ≤ 1 } |
-| δC(x) (indicator) | sup{ ⟨y, x⟩ : x ∈ C }  (support function) |
-
----
+| $f(x)$ | $f^*(y)$ |
+|--------|----------|
+| $\|x\|_1$ | $\delta_C(y)$, $C = \{ y : \|y\|_\infty \leq 1 \}$ |
+| $\delta_C(x)$ (indicator) | $\sup\{ \langle y, x \rangle : x \in C \}$ (support function) |
 
 ## 6. Moreau Envelope & Proximal Operator
 
-```
-Pf(x) = argmin { f(y) + ½‖y − x‖² }    ← proximal mapping
-          y
+$$\text{prox}_f(x) = \arg\min_y \left\{ f(y) + \frac{1}{2}\|y - x\|^2 \right\} \quad \leftarrow \text{proximal mapping}$$
 
-Mf(x) =  min  { f(y) + ½‖y − x‖² }    ← Moreau envelope
-          y
-```
+$$M_f(x) = \min_y \left\{ f(y) + \frac{1}{2}\|y - x\|^2 \right\} \quad \leftarrow \text{Moreau envelope}$$
 
 **Properties:**
 
-- ∇Mf(x) = x − Pf(x)  &nbsp; (Mf is always differentiable)
-- argmin f = argmin Mf
-- Pδ\_C(x) = ΠC(x)
+- $\nabla M_f(x) = x - \text{prox}_f(x)$ &nbsp; ($M_f$ is always differentiable)
+- $\arg\min f = \arg\min M_f$
+- $\text{prox}_{\delta_C}(x) = \Pi_C(x)$
 
 **Moreau Decomposition:**
 
-```
-x        = Pf(x) + Pf*(x)
-½‖x‖²   = Mf(x) + Mf*(x)
-```
+$$x = \text{prox}_f(x) + \text{prox}_{f^*}(x)$$
+$$\frac{1}{2}\|x\|^2 = M_f(x) + M_{f^*}(x)$$
 
-**Soft Thresholding** — prox of f(x) = λ|x|:
+**Soft Thresholding** — prox of $f(x) = \lambda|x|$:
 
-```
-Pf(x) = Sλ(x) = sign(x) · max{ |x| − λ, 0 }
-```
+$$\text{prox}_f(x) = S_\lambda(x) = \text{sign}(x) \cdot \max\{|x| - \lambda,\ 0\}$$
 
-Applied elementwise to x = [x₁; …; xₙ]:
+Applied elementwise to $x = [x_1; \ldots; x_n]$:
 
-```
-[Sλ(x)]ᵢ = sign(xᵢ) · max{ |xᵢ| − λ, 0 }
-```
+$$[S_\lambda(x)]_i = \text{sign}(x_i) \cdot \max\{|x_i| - \lambda,\ 0\}$$
 
-**Huber function** (Moreau envelope of f(x) = λ|x|):
+**Huber function** (Moreau envelope of $f(x) = \lambda|x|$):
 
-```
-Mf(x) = ½x²           if |x| ≤ λ
-         λ|x| − λ²/2   if |x| > λ
-```
-
----
+$$M_f(x) = \begin{cases} \frac{1}{2}x^2 & \text{if } |x| \leq \lambda \\ \lambda|x| - \frac{\lambda^2}{2} & \text{if } |x| > \lambda \end{cases}$$
 
 ## 7. Proximal Gradient (PG) Method
 
-**Problem:** min f(β) + g(β),  where f is smooth and g is convex non-smooth.
+**Problem:** $\min_\beta\ f(\beta) + g(\beta)$, where $f$ is smooth and $g$ is convex non-smooth.
 
-**Key insight** — gradient step on f only, then prox on g:
+**Key insight** — gradient step on $f$ only, then prox on $g$:
 
-```
-β^(k+1) = Pαg( β^(k) − α∇f(β^(k)) )
-```
+$$\beta^{(k+1)} = \text{prox}_{\alpha g}\!\left( \beta^{(k)} - \alpha \nabla f(\beta^{(k)}) \right)$$
 
 **Algorithm:**
 
-```
-choose β^(0),  step size α > 0
-repeat:
-    β^(k+1) = Pαg( β^(k) − α∇f(β^(k)) )
-until convergence
-```
+1. Choose $\beta^{(0)}$, step size $\alpha > 0$
+2. Repeat: $\beta^{(k+1)} = \text{prox}_{\alpha g}\!\left( \beta^{(k)} - \alpha \nabla f(\beta^{(k)}) \right)$
+3. Until convergence
 
-**Convergence:** f(β^(k)) + g(β^(k)) − optimal ≤ O(1/k)
-
----
+**Convergence:** $f(\beta^{(k)}) + g(\beta^{(k)}) - \text{optimal} \leq O(1/k)$
 
 ## 8. Accelerated Proximal Gradient (APG) Method
 
-**Algorithm (FISTA-style):**
+**Algorithm (FISTA-style):** Choose $\beta^{(0)}$, step size $\alpha > 0$, $t_0 = t_1 = 1$. Repeat:
 
-```
-choose β^(0),  step size α > 0,  t₀ = t₁ = 1
-repeat:
-    β̄^(k)   = β^(k) + (tₖ − 1)/t_{k+1} · (β^(k) − β^(k−1))   ← momentum
-    β^(k+1) = Pαg( β̄^(k) − α∇f(β̄^(k)) )
-    t_{k+1} = ( 1 + √(1 + 4tₖ²) ) / 2
-until convergence
-```
+$$\bar{\beta}^{(k)} = \beta^{(k)} + \frac{t_k - 1}{t_{k+1}} \left( \beta^{(k)} - \beta^{(k-1)} \right) \quad \leftarrow \text{momentum}$$
 
-**Convergence:** f(β^(k)) + g(β^(k)) − optimal ≤ O(1/k²)
+$$\beta^{(k+1)} = \text{prox}_{\alpha g}\!\left( \bar{\beta}^{(k)} - \alpha \nabla f(\bar{\beta}^{(k)}) \right)$$
 
-**Step size rule:** α ∈ (0, 1/L),  where L = Lipschitz constant of ∇f
+$$t_{k+1} = \frac{1 + \sqrt{1 + 4t_k^2}}{2}$$
 
----
+**Convergence:** $f(\beta^{(k)}) + g(\beta^{(k)}) - \text{optimal} \leq O(1/k^2)$
+
+**Step size rule:** $\alpha \in (0, 1/L)$, where $L$ = Lipschitz constant of $\nabla f$
 
 ## 9. APG Applied to Lasso
 
-```
-min  ½‖Xβ − Y‖²  +  λ‖β‖₁
- β
-```
+$$\min_\beta\ \frac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|_1$$
 
-- ∇f(β) = Xᵀ(Xβ − Y)
-- Lipschitz constant: L = λ\_max(XᵀX)
-- Step size: α = 1/L
+- $\nabla f(\beta) = X^T(X\beta - Y)$
+- Lipschitz constant: $L = \lambda_{\max}(X^T X)$
+- Step size: $\alpha = 1/L$
 
 **Iteration:**
 
-```
-β̄^(k)   = β^(k) + (tₖ − 1)/t_{k+1} · (β^(k) − β^(k−1))
+$$\bar{\beta}^{(k)} = \beta^{(k)} + \frac{t_k - 1}{t_{k+1}} \left( \beta^{(k)} - \beta^{(k-1)} \right)$$
 
-β^(k+1) = S_{λ/L}( β̄^(k) − (1/L) · Xᵀ(Xβ̄^(k) − Y) )
-```
+$$\beta^{(k+1)} = S_{\lambda/L}\!\left( \bar{\beta}^{(k)} - \frac{1}{L} X^T(X\bar{\beta}^{(k)} - Y) \right)$$
 
-**Optimality condition:**  β\* is optimal  ⟺  β\* = Pg(β\* − ∇f(β\*))
+**Optimality condition:** $\beta^*$ is optimal $\iff \beta^* = \text{prox}_g(\beta^* - \nabla f(\beta^*))$
 
-**Stopping criterion** (tolerance ε > 0):
+**Stopping criterion** (tolerance $\varepsilon > 0$):
 
-```
-‖ β^(k) − Sλ( β^(k) − Xᵀ(Xβ^(k) − Y) ) ‖ < ε
-```
-
----
+$$\left\| \beta^{(k)} - S_\lambda\!\left( \beta^{(k)} - X^T(X\beta^{(k)} - Y) \right) \right\| < \varepsilon$$
 
 ## 10. Complexity Summary
 
-| Method | Convergence rate | Iterations to 10⁻⁴ error |
-|--------|-----------------|--------------------------|
-| PG | O(1/k) | ~O(10⁴) |
-| APG | O(1/k²) | ~O(10²) |
+| Method | Convergence rate | Iterations to $10^{-4}$ error |
+|--------|-----------------|-------------------------------|
+| PG | $O(1/k)$ | $\sim O(10^4)$ |
+| APG | $O(1/k^2)$ | $\sim O(10^2)$ |
 
 - APG has the **same per-iteration cost** as PG (one prox + one gradient eval)
 - **Restart trick:** rerun APG every 100–200 iterations from the latest iterate

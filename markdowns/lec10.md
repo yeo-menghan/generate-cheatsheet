@@ -85,14 +85,3 @@ Neighbourhood: $\mathcal{N}(j) = \{t \mid \beta^j_t \neq 0\}$
 **Graph construction:**
 - **AND rule:** edge $(s,t)$ iff $s \in \mathcal{N}(t)$ **and** $t \in \mathcal{N}(s)$
 - **OR rule:** edge $(s,t)$ iff $s \in \mathcal{N}(t)$ **or** $t \in \mathcal{N}(s)$
-
-## 9. Quick Reference
-
-| Symbol | Meaning |
-|---|---|
-| $\Sigma$ | Covariance matrix |
-| $\Theta = \Sigma^{-1}$ | Precision (inverse covariance) matrix |
-| $S$ | Sample covariance matrix |
-| $\lambda$ | Regularisation parameter |
-| $\sigma$ | ADMM step size |
-| $\mathbb{S}^p_{++}$ | Set of $p\times p$ positive definite matrices |

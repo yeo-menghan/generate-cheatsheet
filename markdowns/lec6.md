@@ -1,15 +1,11 @@
 # Lecture 6: Block Coordinate Descent (BCD)
 
----
-
 ## Target Problem
 
 $$\min_{x \in \mathbb{R}^n} F(x) = f(x) + \sum_{i=1}^{n} r_i(x_i)$$
 
 - $f$: convex, differentiable (smooth part)
 - $r_i(x_i)$: closed proper convex, **separable** (non-smooth part)
-
----
 
 ## Coordinate-wise Minimizer
 
@@ -29,8 +25,6 @@ $$\bar{x}_i \in \arg\min_{x_i} f(\bar{x}_1, \ldots, \bar{x}_{i-1}, x_i, \bar{x}_
 | $f$ non-differentiable, non-separable | ❌ not guaranteed |
 | $f$ non-differentiable, **separable** $r_i(x_i)$ | ✅ coord-wise min ⟹ global min |
 
----
-
 ## Coordinate Descent Algorithm
 
 Cycle through $i = 1, 2, \ldots, n$ and solve one 1D subproblem at a time:
@@ -39,67 +33,32 @@ $$x_i^{(k+1)} \leftarrow \arg\min_{x_i}\ f(x_1^{(k+1)}, \ldots, x_{i-1}^{(k+1)},
 
 > Use updated values $x_1^{(k+1)}, \ldots, x_{i-1}^{(k+1)}$ immediately. **Cannot be parallelised.**
 
----
+**Example** — $f(x_1, x_2) = x_1^2 + x_1 x_2 + x_2^2$, start at $(x_1, x_2) = (2, 2)$:
+
+- Update $x_1$: $\min_{x_1} x_1^2 + 2x_1 \Rightarrow \frac{\partial}{\partial x_1} = 2x_1 + x_2 = 0 \Rightarrow x_1^{(1)} = -x_2/2 = -1$
+- Update $x_2$: $\min_{x_2} (-1)(-1) + (-1)x_2 + x_2^2 \Rightarrow \frac{\partial}{\partial x_2} = x_1 + 2x_2 = 0 \Rightarrow x_2^{(1)} = 1/2$
+
+After 1 step: $(x_1, x_2) = (-1,\ 0.5)$, moving toward $(0, 0)$.
 
 ## Key Tools for Derivations
 
-**Optimality condition** (convex $f$):
-$$x^* \in \arg\min f(x) \iff 0 \in \partial f(x^*)$$
+**Optimality condition** (convex $f$): $x^* \in \arg\min f(x) \iff 0 \in \partial f(x^*)$
 
-**Proximal mapping:**
-$$P_{\alpha g}(x) = \arg\min_y \left\{ g(y) + \tfrac{1}{2}\|y - x\|^2 \right\}$$
+**Proximal characterisation:** $y = P_g(x) \iff x \in y + \partial g(y)$
 
-**Characterisation:**
-$$y = P_g(x) \iff x \in y + \partial g(y)$$
+**Special cases:** $P_{\lambda|\cdot|}(x) = S_\lambda(x)$, $\quad P_{\delta_C}(x) = \Pi_C(x)$, $\quad \partial|0| = [-1,1]$
 
-**Special cases:**
-$$P_{\lambda|\cdot|}(x) = S_\lambda(x) \qquad P_{\delta_C}(x) = \Pi_C(x)$$
+## Applications 1–3: Regression Variants
 
-**Soft-thresholding operator:**
-$$S_\lambda(t) = \text{sign}(t)\cdot\max\{|t| - \lambda,\; 0\}$$
+Let $\tilde{\beta}_i = \dfrac{X_{\cdot i}^T(Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2}$ (OLS update for coordinate $i$). All three share this inner quantity:
 
-**Subdifferential of $|\cdot|$ at 0:**
-$$\partial|0| = [-1, 1]$$
+| Problem | Update rule |
+|---|---|
+| Linear regression | $\beta_i \leftarrow \tilde{\beta}_i$ |
+| Lasso ($+\lambda\|\beta\|_1$) | $\beta_i \leftarrow S_{\lambda/\|X_{\cdot i}\|^2}(\tilde{\beta}_i)$ |
+| Box-constrained ($l \leq \beta \leq u$) | $\beta_i \leftarrow \Pi_{[l_i, u_i]}(\tilde{\beta}_i)$ |
 
----
-
-## Application 1: Linear Regression
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2$$
-
-**Update rule:**
-$$\beta_i \leftarrow \frac{X_{\cdot i}^T (Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2} = \beta_i - \frac{X_{\cdot i}^T(X\beta - Y)}{\|X_{\cdot i}\|^2}$$
-
-> Parameter-free (no step size). $X_{-i}$ = $X$ with $i$-th column removed; $\beta_{-i}$ = $\beta$ with $i$-th entry removed.
-
----
-
-## Application 2: Lasso
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2 + \lambda\|\beta\|_1, \quad \lambda > 0$$
-
-Non-differentiable term is separable: $\lambda\|\beta\|_1 = \sum_{i=1}^p \lambda|\beta_i|$
-
-**Update rule:**
-$$\beta_i \leftarrow S_{\lambda / \|X_{\cdot i}\|^2}\!\left(\frac{X_{\cdot i}^T(Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2}\right)$$
-
-> Same inner quantity as linear regression, wrapped in soft-thresholding. Produces sparse solutions.
-
----
-
-## Application 3: Box-Constrained Regression
-
-$$\min_{\beta \in \mathbb{R}^p} \tfrac{1}{2}\|X\beta - Y\|^2 \quad \text{s.t.}\ l \leq \beta \leq u$$
-
-Indicator $\delta_C(\beta) = \sum_i \delta_{C_i}(\beta_i)$ is separable.
-
-**Update rule:**
-$$\beta_i \leftarrow \Pi_{C_i}\!\left(\frac{X_{\cdot i}^T(Y - X_{-i}\beta_{-i})}{\|X_{\cdot i}\|^2}\right)$$
-
-**Clipping (projection onto $[l_i, u_i]$):**
-$$\Pi_{C_i}(t) = \begin{cases} u_i & t > u_i \\ t & l_i \leq t \leq u_i \\ l_i & t < l_i \end{cases}$$
-
----
+> $X_{-i}$ = $X$ with $i$-th column removed; $\Pi_{[l,u]}(t) = \min(u, \max(l, t))$. No step size needed.
 
 ## Application 4: SVM — SMO
 
@@ -118,8 +77,6 @@ $$\text{s.t.}\quad y_1\alpha_1 + y_2\alpha_2 = \zeta,\quad 0 \leq \alpha_1 \leq 
 | $0 < \alpha_i < C$ | $y_i(\beta^T x_i + \beta_0) = 1$ |
 | $\alpha_i = C$ | $y_i(\beta^T x_i + \beta_0) \leq 1$ |
 
----
-
 ## Application 5: Parallel Projections
 
 Find $x \in C_1 \cap C_2 \cap \cdots \cap C_m$ via:
@@ -129,8 +86,6 @@ $$\min_{x,\, y_i}\ \tfrac{1}{2}\sum_{i=1}^m \|y_i - x\|^2 \quad \text{s.t.}\ y_i
 **BCD updates (repeats until convergence):**
 $$y_i \leftarrow \Pi_{C_i}(x) \quad \text{for } i = 1, \ldots, m \qquad \text{(parallelisable)}$$
 $$x \leftarrow \frac{1}{m}\sum_{i=1}^m y_i$$
-
----
 
 ## Summary: CD vs Gradient Descent
 
